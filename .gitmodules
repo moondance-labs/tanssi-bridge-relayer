@@ -1,0 +1,3 @@
+[submodule "snowbridge"]
+	path = snowbridge
+	url = git@github.com:Snowfork/snowbridge.git

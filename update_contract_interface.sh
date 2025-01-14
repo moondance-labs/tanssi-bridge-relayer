@@ -4,11 +4,12 @@
 set -e
 
 # Copy overridden contracts into main contracts directory
-cp  ./overridden_contracts/*.sol ./snowbridge/contracts/src
+cp  -R ./overridden_contracts/src/ ./snowbridge/contracts/src
+cp  -R ./overridden_contracts/test/ ./snowbridge/contracts/test
 
 # Compile the resulting contracts
 pushd ./snowbridge/contracts
-forge build --skip test
+forge build
 popd
 
 # Create Go interface to it in main directory

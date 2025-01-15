@@ -88,6 +88,7 @@ enum Command {
     TransferNativeToken,
     RegisterForeignToken,
     MintForeignToken,
+    /// @dev Below enums are reserved in case upstream snowbridge adds more commands
     Reserved12,
     Reserved13,
     Reserved14,

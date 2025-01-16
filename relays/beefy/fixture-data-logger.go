@@ -43,6 +43,7 @@ func (wr *EthereumWriter) makeSubmitFinalLogFields(
 				"nextAuthoritySetLen":  params.Leaf.NextAuthoritySetLen,
 				"nextAuthoritySetRoot": Hex(params.Leaf.NextAuthoritySetRoot[:]),
 				"parachainHeadsRoot":   Hex(params.Leaf.ParachainHeadsRoot[:]),
+				"messageCommitment":    Hex(params.Leaf.MessageCommitment[:]),
 			},
 			"leafProof":      leafProofItems,
 			"leafProofOrder": params.LeafProofOrder,

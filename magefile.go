@@ -17,6 +17,12 @@ func BuildMain() error {
 	if err != nil {
 		return err
 	}
+
+	err = sh.Run("./add_overridden_contracts.sh")
+	if err != nil {
+		return err
+	}
+
 	err = sh.Run("./update_contract_interface.sh")
 	if err != nil {
 		return err

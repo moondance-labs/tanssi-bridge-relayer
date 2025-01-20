@@ -3,6 +3,7 @@
 pragma solidity 0.8.25;
 
 import {MerkleProof} from "openzeppelin/utils/cryptography/MerkleProof.sol";
+import {Ownable} from "openzeppelin/access/Ownable.sol";
 import {Verification} from "./Verification.sol";
 import {Assets} from "./Assets.sol";
 import {AgentExecutor} from "./AgentExecutor.sol";
@@ -55,9 +56,11 @@ import {Operators} from "./Operators.sol";
 
 import {IOGateway} from "./interfaces/IOGateway.sol";
 
-contract Gateway is IOGateway, IInitializable, IUpgradable {
+contract Gateway is IOGateway, IInitializable, IUpgradable, Ownable {
     using Address for address;
     using SafeNativeTransfer for address payable;
+
+    address public s_middleware;
 
     address public immutable AGENT_EXECUTOR;
 
@@ -767,5 +770,12 @@ contract Gateway is IOGateway, IInitializable, IUpgradable {
         // Initialize operator storage
         OperatorStorage.Layout storage operatorStorage = OperatorStorage.layout();
         operatorStorage.operator = config.rescueOperator;
+    }
+
+    /// Changes the middleware address.
+    function setMiddleware(
+        address middleware
+    ) external onlyOwner {
+        s_middleware = middleware;
     }
 }

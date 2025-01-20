@@ -61,6 +61,7 @@ contract Gateway is IOGateway, IInitializable, IUpgradable, Ownable {
     using SafeNativeTransfer for address payable;
 
     address public s_middleware;
+    event MiddlewareChanged(address indexed previousMiddleware, address indexed newMiddleware);
 
     address public immutable AGENT_EXECUTOR;
 
@@ -776,6 +777,12 @@ contract Gateway is IOGateway, IInitializable, IUpgradable, Ownable {
     function setMiddleware(
         address middleware
     ) external onlyOwner {
+        address oldMiddleware = s_middleware;
+
+        require(middleware != address(0), "new middleware is the zero address");
+        require(middleware != oldMiddleware, "new middleware is the same as before");
+        
         s_middleware = middleware;
+        emit MiddlewareChanged(oldMiddleware, middleware);
     }
 }

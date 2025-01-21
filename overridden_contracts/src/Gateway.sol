@@ -781,11 +781,11 @@ contract Gateway is IOGateway, IInitializable, IUpgradable, Ownable {
     ) external onlyOwner {
         address oldMiddleware = s_middleware;
 
-        if(middleware != address(0)) {
+        if(middleware == address(0)) {
             revert CantSetMiddlewareToZeroAddress();
         }
 
-        if(middleware != oldMiddleware) {
+        if(middleware == oldMiddleware) {
             revert CantSetMiddlewareToSameAddress();
         }
         

@@ -54,7 +54,8 @@ import {UD60x18, ud60x18, convert} from "prb/math/src/UD60x18.sol";
 
 import {Operators} from "./Operators.sol";
 
-import {IOGateway} from "./interfaces/IOGateway.sol";
+import {IOGateway, Slash} from "./interfaces/IOGateway.sol";
+import {IMiddlewareBasic} from "./interfaces/IMiddlewareBasic.sol";
 
 contract Gateway is IOGateway, IInitializable, IUpgradable, Ownable {
     using Address for address;
@@ -238,6 +239,21 @@ contract Gateway is IOGateway, IInitializable, IUpgradable, Ownable {
             try Gateway(this).mintForeignToken{gas: maxDispatchGas}(message.params) {}
             catch {
                 success = false;
+            }
+        }
+        else if (message.command == Command.ReportSlashes) {
+            if (s_middleware != address(0)) {
+                (Slash[] memory slashes) = abi.decode(message.params, (Slash[]));
+                // At most it will be 10, defined by
+                // https://github.com/moondance-labs/tanssi/blob/88e59e6e5afb198947690487f286b9ad7cd4cde6/chains/orchestrator-relays/runtime/dancelight/src/lib.rs#L1446
+                for(uint i=0; i<slashes.length; ++i){
+                    uint48 epoch = IMiddlewareBasic(s_middleware).getEpochAtTs(uint48(slashes[i].timestamp));
+                    //TODO maxDispatchGas should be probably be defined for all slashes, not only for one
+                    try IMiddlewareBasic(s_middleware).slash{gas: maxDispatchGas}(epoch, slashes[i].operatorKey, slashes[i].slashFraction) {}
+                    catch {
+                        success = false;
+                    }
+                }
             }
         }
 
@@ -660,7 +676,7 @@ contract Gateway is IOGateway, IInitializable, IUpgradable, Ownable {
 
     /// @dev Transfer ether from an agent
     function _transferNativeFromAgent(address agent, address payable recipient, uint256 amount) internal {
-        bytes memory call = abi.encodeCall(AgentExecutor.transferNative, (recipient, amount));
+            bytes memory call = abi.encodeCall(AgentExecutor.transferNative, (recipient, amount));
         _invokeOnAgent(agent, call);
     }
 

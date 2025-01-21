@@ -28,3 +28,9 @@ interface IOGateway is IGateway {
         bytes32[] calldata data
     ) external;
 }
+
+struct Slash {
+        bytes32 operatorKey;
+        uint256 slashFraction;
+        uint256 timestamp;
+}

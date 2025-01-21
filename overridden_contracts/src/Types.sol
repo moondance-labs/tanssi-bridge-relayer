@@ -110,7 +110,8 @@ enum Command {
     Reserved30,
     Reserved31,
     Test,
-    ReportRewards
+    ReportRewards,
+    ReportSlashes
 }
 
 /// @dev DEPRECATED

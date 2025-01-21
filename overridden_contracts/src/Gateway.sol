@@ -60,9 +60,6 @@ contract Gateway is IOGateway, IInitializable, IUpgradable, Ownable {
     using Address for address;
     using SafeNativeTransfer for address payable;
 
-    address public s_middleware;
-    event MiddlewareChanged(address indexed previousMiddleware, address indexed newMiddleware);
-
     address public immutable AGENT_EXECUTOR;
 
     // Verification state
@@ -91,6 +88,9 @@ contract Gateway is IOGateway, IInitializable, IUpgradable, Ownable {
 
     uint8 internal immutable FOREIGN_TOKEN_DECIMALS;
 
+    // Address of the middleware contract.
+    address public s_middleware;
+
     error InvalidProof();
     error InvalidNonce();
     error NotEnoughGas();
@@ -105,6 +105,8 @@ contract Gateway is IOGateway, IInitializable, IUpgradable, Ownable {
     error InvalidAgentExecutionPayload();
     error InvalidConstructorParams();
     error TokenNotRegistered();
+    error CantSetMiddlewareToZeroAddress();
+    error CantSetMiddlewareToSameAddress();
 
     // Message handlers can only be dispatched by the gateway itself
     modifier onlySelf() {
@@ -779,8 +781,13 @@ contract Gateway is IOGateway, IInitializable, IUpgradable, Ownable {
     ) external onlyOwner {
         address oldMiddleware = s_middleware;
 
-        require(middleware != address(0), "new middleware is the zero address");
-        require(middleware != oldMiddleware, "new middleware is the same as before");
+        if(middleware != address(0)) {
+            revert CantSetMiddlewareToZeroAddress();
+        }
+
+        if(middleware != oldMiddleware) {
+            revert CantSetMiddlewareToSameAddress();
+        }
         
         s_middleware = middleware;
         emit MiddlewareChanged(oldMiddleware, middleware);

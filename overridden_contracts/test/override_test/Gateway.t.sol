@@ -252,4 +252,19 @@ contract GatewayTest is Test {
 
         IOGateway(address(gateway)).sendOperatorsData(accounts);
     }
+
+    function testOwnerCanChangeMiddleware() public {
+        vm.expectEmit(true, true, false, false);
+        emit IOGateway.MiddlewareChanged(address(0), 0x0123456789012345678901234567890123456789);
+
+        IOGateway(address(gateway)).setMiddleware(0x0123456789012345678901234567890123456789);
+
+        require(IOGateway(address(gateway)).s_middleware() == 0x0123456789012345678901234567890123456789);
+    }
+
+    function testNonOwnerCantChangeMiddleware() public {
+        vm.prank(0x1111111111111111111111111111111111111111);
+        vm.expectRevert();
+        IOGateway(address(gateway)).setMiddleware(0x9876543210987654321098765432109876543210);
+    }
 }

@@ -603,7 +603,7 @@ contract Gateway is IOGateway, IInitializable, IUpgradable, Ownable {
         emit OutboundMessageAccepted(channelID, channel.outboundNonce, messageID, ticket.payload);
     }
 
-        // Submit an outbound message to a specific channel.
+    // Submit an outbound message to a specific channel.
     // Doesn't handle fees.
     function _submitOutboundToChannel(ChannelID channelID, bytes memory payload) internal {
         Channel storage channel = _ensureChannel(channelID);
@@ -694,7 +694,7 @@ contract Gateway is IOGateway, IInitializable, IUpgradable, Ownable {
         address rescueOperator;
     }
 
-        /// Initialize storage within the `GatewayProxy` contract using this initializer.
+    /// Initialize storage within the `GatewayProxy` contract using this initializer.
     ///
     /// This initializer cannot be called externally via the proxy as the function selector
     /// is overshadowed in the proxy.
@@ -730,6 +730,8 @@ contract Gateway is IOGateway, IInitializable, IUpgradable, Ownable {
         CoreStorage.Layout storage core = CoreStorage.layout();
 
         Config memory config = abi.decode(data, (Config));
+
+        _transferOwnership(msg.sender);
 
         core.mode = config.mode;
 

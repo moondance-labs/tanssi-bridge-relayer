@@ -61,6 +61,9 @@ contract Gateway is IOGateway, IInitializable, IUpgradable, Ownable {
     using Address for address;
     using SafeNativeTransfer for address payable;
 
+    event UnableToProcessIndividualSlash(IOGateway.Slash slash);
+    event UnableToProcessSlashMessage();
+
     address public immutable AGENT_EXECUTOR;
 
     // Verification state
@@ -108,6 +111,7 @@ contract Gateway is IOGateway, IInitializable, IUpgradable, Ownable {
     error TokenNotRegistered();
     error CantSetMiddlewareToZeroAddress();
     error CantSetMiddlewareToSameAddress();
+    error MiddlewareNotSet();
 
     // Message handlers can only be dispatched by the gateway itself
     modifier onlySelf() {
@@ -242,19 +246,12 @@ contract Gateway is IOGateway, IInitializable, IUpgradable, Ownable {
             }
         }
         else if (message.command == Command.ReportSlashes) {
-            if (s_middleware != address(0)) {
-                (IOGateway.Slash[] memory slashes) = abi.decode(message.params, (IOGateway.Slash[]));
-                // At most it will be 10, defined by
-                // https://github.com/moondance-labs/tanssi/blob/88e59e6e5afb198947690487f286b9ad7cd4cde6/chains/orchestrator-relays/runtime/dancelight/src/lib.rs#L1446
-                for(uint i=0; i<slashes.length; ++i){
-                    uint48 epoch = IMiddlewareBasic(s_middleware).getEpochAtTs(uint48(slashes[i].timestamp));
-                    //TODO maxDispatchGas should be probably be defined for all slashes, not only for one
-                    try IMiddlewareBasic(s_middleware).slash{gas: maxDispatchGas}(epoch, slashes[i].operatorKey, slashes[i].slashFraction) {}
-                    catch {
-                        success = false;
-                    }
+                // We need to put all this inside a generic try-catch, since we dont want to revert decoding nor anything
+                try Gateway(this).reportSlashes{gas: maxDispatchGas}(message.params){}
+                catch {
+                    emit UnableToProcessSlashMessage();
+                    success = false;
                 }
-            }
         }
 
         // Calculate a gas refund, capped to protect against huge spikes in `tx.gasprice`
@@ -475,6 +472,32 @@ contract Gateway is IOGateway, IInitializable, IUpgradable, Ownable {
         TransferNativeTokenParams memory params = abi.decode(data, (TransferNativeTokenParams));
         address agent = _ensureAgent(params.agentID);
         Assets.transferNativeToken(AGENT_EXECUTOR, agent, params.token, params.recipient, params.amount);
+    }
+
+    // @dev Mint foreign token from polkadot
+    function reportSlashes(
+        bytes calldata data
+    ) external onlySelf {
+        // Dont process message if we dont have a middleware set
+        if (s_middleware != address(0)) {
+            revert MiddlewareNotSet();
+        }
+
+        // Decode
+        (IOGateway.Slash[] memory slashes) = abi.decode(data, (IOGateway.Slash[]));
+        IMiddlewareBasic middleware = IMiddlewareBasic(s_middleware);
+
+        // At most it will be 10, defined by
+        // https://github.com/moondance-labs/tanssi/blob/88e59e6e5afb198947690487f286b9ad7cd4cde6/chains/orchestrator-relays/runtime/dancelight/src/lib.rs#L1446
+        for(uint i=0; i<slashes.length; ++i){
+            uint48 epoch = middleware.getEpochAtTs(uint48(slashes[i].timestamp));
+            //TODO maxDispatchGas should be probably be defined for all slashes, not only for one
+            try middleware.slash(epoch, slashes[i].operatorKey, slashes[i].slashFraction) {}
+            catch {
+                emit UnableToProcessIndividualSlash(slashes[i]);
+                continue;
+            }
+        }
     }
 
     function isTokenRegistered(

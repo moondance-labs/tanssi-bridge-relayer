@@ -264,7 +264,7 @@ contract GatewayTest is Test {
 
     function testNonOwnerCantChangeMiddleware() public {
         vm.prank(0x1111111111111111111111111111111111111111);
-        vm.expectRevert();
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector));
         IOGateway(address(gateway)).setMiddleware(0x9876543210987654321098765432109876543210);
     }
 }

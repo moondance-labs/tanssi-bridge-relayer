@@ -35,6 +35,7 @@ import {AgentExecutor} from "../../src/AgentExecutor.sol";
 import {SetOperatingModeParams} from "../../src/Params.sol";
 
 import {Strings} from "openzeppelin/utils/Strings.sol";
+import {Ownable} from "openzeppelin/contracts/access/Ownable.sol";
 
 import {Gateway} from "../../src/Gateway.sol";
 import {IOGateway} from "../../src/interfaces/IOGateway.sol";

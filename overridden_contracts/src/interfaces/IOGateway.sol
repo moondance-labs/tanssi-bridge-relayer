@@ -12,7 +12,7 @@
 // GNU General Public License for more details.
 // You should have received a copy of the GNU General Public License
 // along with Tanssi.  If not, see <http://www.gnu.org/licenses/>
-pragma solidity 0.8.25;
+pragma solidity ^0.8.0;
 
 import {ParaID} from "../Types.sol";
 import {IGateway} from "./IGateway.sol";
@@ -24,13 +24,17 @@ interface IOGateway is IGateway {
     // Emitted when the middleware contract address is changed by the owner.
     event MiddlewareChanged(address indexed previousMiddleware, address indexed newMiddleware);
 
-    function sendOperatorsData(
-        bytes32[] calldata data
-    ) external;
-}
-
-struct Slash {
+    // Slash struct, used to decode slashes, which are identified by
+    // operatorKey to be slashed
+    // slashFraction to be applied as parts per billion
+    // timestamp identifying when the slash happened
+    struct Slash {
         bytes32 operatorKey;
         uint256 slashFraction;
         uint256 timestamp;
+    }
+
+    function sendOperatorsData(
+        bytes32[] calldata data
+    ) external;
 }

@@ -1,0 +1,70 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+env:
+  FOUNDRY_PROFILE: ci
+
+jobs:
+  set-tags:
+    runs-on: ubuntu-latest
+    outputs:
+      git_ref: ${{ steps.check-git-ref.outputs.git_ref }}
+      git_branch: ${{ steps.check-git-ref.outputs.git_branch }}
+      git_target_branch: ${{ steps.check-git-ref.outputs.git_target_branch }}
+    steps:
+      - name: Check git ref
+        id: check-git-ref
+        # if PR
+        # else if manual PR
+        # else (push)
+        run: |
+          if [[ -n "${{ github.event.pull_request.head.sha }}" ]]; then
+            echo "git_branch=$(echo ${GITHUB_HEAD_REF})" >> $GITHUB_OUTPUT
+            echo "git_target_branch=$(echo ${GITHUB_BASE_REF})" >> $GITHUB_OUTPUT
+            echo "git_ref=${{ github.event.pull_request.head.sha }}" >> $GITHUB_OUTPUT
+          else
+            echo "git_branch=$(echo ${GITHUB_REF#refs/heads/})" >> $GITHUB_OUTPUT
+            echo "git_target_branch=$(echo ${GITHUB_REF#refs/heads/})" >> $GITHUB_OUTPUT
+            echo "git_ref=$GITHUB_REF" >> $GITHUB_OUTPUT
+          fi
+  check:
+    strategy:
+      fail-fast: true
+
+    name: Foundry project
+    runs-on: ubuntu-latest
+
+    needs: ["set-tags"]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: stable
+
+      - name: Show Forge version
+        run: |
+          forge --version
+
+      - name: Override contracts and Build
+        run: |
+          ./add_overridden_contracts.sh
+
+      - name: Run Forge fmt
+        run: |
+          cd snowbridge/contracts
+          forge fmt --check
+        id: fmt
+
+      - name: Run Forge tests
+        run: |
+          cd snowbridge/contracts
+          forge test -vvv
+        id: test

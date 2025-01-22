@@ -34,7 +34,5 @@ interface IOGateway is IGateway {
         uint256 timestamp;
     }
 
-    function sendOperatorsData(
-        bytes32[] calldata data
-    ) external;
+    function sendOperatorsData(bytes32[] calldata data) external;
 }

@@ -15,7 +15,7 @@
 pragma solidity ^0.8.0;
 
 interface IMiddlewareBasic {
-   /**
+    /**
      * @notice Distributes rewards
      * @param epoch The epoch of the rewards distribution
      * @param eraIndex The era index of the rewards distribution
@@ -45,7 +45,5 @@ interface IMiddlewareBasic {
      * @param timestamp The timestamp to check
      * @return epoch The corresponding epoch number
      */
-        function getEpochAtTs(
-        uint48 timestamp
-    ) external view returns (uint48 epoch);
+    function getEpochAtTs(uint48 timestamp) external view returns (uint48 epoch);
 }

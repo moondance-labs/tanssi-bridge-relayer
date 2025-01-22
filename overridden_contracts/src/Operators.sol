@@ -28,9 +28,7 @@ library Operators {
 
     uint16 private constant MAX_OPERATORS = 1000;
 
-    function encodeOperatorsData(
-        bytes32[] calldata operatorsKeys
-    ) internal returns (Ticket memory ticket) {
+    function encodeOperatorsData(bytes32[] calldata operatorsKeys) internal returns (Ticket memory ticket) {
         if (operatorsKeys.length == 0) {
             revert Operators__OperatorsKeysCannotBeEmpty();
         }

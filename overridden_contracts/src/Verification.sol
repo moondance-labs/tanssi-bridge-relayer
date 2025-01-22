@@ -98,11 +98,12 @@ library Verification {
     /// @param messageCommitment The message commitment root expected to be contained within the
     ///                   digest of BridgeHub parachain header.
     /// @param proof The chain of proofs described above
-    function verifyCommitment(address beefyClient, bytes4 encodedParaID, bytes32 messageCommitment, Proof calldata proof)
-        external
-        view
-        returns (bool)
-    {
+    function verifyCommitment(
+        address beefyClient,
+        bytes4 encodedParaID,
+        bytes32 messageCommitment,
+        Proof calldata proof
+    ) external view returns (bool) {
         bytes32 leafHash = createMMRLeaf(proof.leafPartial, proof.parachainHeadsRoot, messageCommitment);
 
         // Verify that the MMR leaf is part of the MMR maintained by the BEEFY light client
@@ -202,7 +203,11 @@ library Verification {
 
     // SCALE-encode: MMRLeaf
     // Reference: https://github.com/paritytech/substrate/blob/14e0a0b628f9154c5a2c870062c3aac7df8983ed/primitives/consensus/beefy/src/mmr.rs#L52
-    function createMMRLeaf(MMRLeafPartial memory leaf, bytes32 parachainHeadsRoot, bytes32 messageCommitment) internal pure returns (bytes32) {
+    function createMMRLeaf(MMRLeafPartial memory leaf, bytes32 parachainHeadsRoot, bytes32 messageCommitment)
+        internal
+        pure
+        returns (bytes32)
+    {
         bytes memory encodedLeaf = bytes.concat(
             ScaleCodec.encodeU8(leaf.version),
             ScaleCodec.encodeU32(leaf.parentNumber),

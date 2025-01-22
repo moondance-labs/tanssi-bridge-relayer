@@ -26,10 +26,11 @@ library OSubstrateTypes {
         ReceiveValidators
     }
 
-    function EncodedOperatorsData(
-        bytes32[] calldata operatorsKeys,
-        uint32 operatorsCount
-    ) internal view returns (bytes memory) {
+    function EncodedOperatorsData(bytes32[] calldata operatorsKeys, uint32 operatorsCount)
+        internal
+        view
+        returns (bytes memory)
+    {
         bytes memory operatorsFlattened = new bytes(operatorsCount * 32);
         for (uint32 i = 0; i < operatorsCount; i++) {
             for (uint32 j = 0; j < 32; j++) {

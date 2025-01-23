@@ -41,11 +41,8 @@ interface IOGateway is IGateway {
         uint256 eraIndex;
         Slash[] slashes;
     }
-    
-    function sendOperatorsData(
-        bytes32[] calldata data,
-        uint48 epoch
-    ) external;
+
+    function sendOperatorsData(bytes32[] calldata data, uint48 epoch) external;
 
     function s_middleware() external view returns (address);
 

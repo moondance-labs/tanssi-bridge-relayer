@@ -187,7 +187,7 @@ contract GatewayTest is Test {
     function testSendOperatorsDataX() public {
         // FINAL_VALIDATORS_PAYLOAD has been encoded with epoch 1.
         uint48 epoch = 1;
-        
+
         // Create mock agent and paraID
         vm.prank(middleware);
         vm.expectEmit(true, false, false, true);

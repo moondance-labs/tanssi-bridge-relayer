@@ -1027,7 +1027,7 @@ contract GatewayTest is Test {
         (Command command, bytes memory params) = makeReportSlashesCommand();
 
         vm.expectEmit(true, true, true, true);
-        emit Gateway.UnableToProcessSlashMessage();
+        emit IOGateway.UnableToProcessSlashMessage();
         // Expect the gateway to emit `InboundMessageDispatched`
         vm.expectEmit(true, false, false, false);
         emit IGateway.InboundMessageDispatched(assetHubParaID.into(), 1, messageID, true);
@@ -1050,7 +1050,7 @@ contract GatewayTest is Test {
 
         // Expect the gateway to emit `InboundMessageDispatched`
         vm.expectEmit(true, true, true, true);
-        emit Gateway.UnableToProcessSlashMessage();
+        emit IOGateway.UnableToProcessSlashMessage();
         vm.expectEmit(true, false, false, false);
         emit IGateway.InboundMessageDispatched(assetHubParaID.into(), 1, messageID, true);
 
@@ -1076,7 +1076,7 @@ contract GatewayTest is Test {
             IOGateway.Slash({operatorKey: bytes32(uint256(1)), slashFraction: 500_000, timestamp: 1});
 
         vm.expectEmit(true, true, true, true);
-        emit Gateway.UnableToProcessIndividualSlash(expectedSlash);
+        emit IOGateway.UnableToProcessIndividualSlash(expectedSlash);
         vm.expectEmit(true, false, false, false);
         emit IGateway.InboundMessageDispatched(assetHubParaID.into(), 1, messageID, true);
 

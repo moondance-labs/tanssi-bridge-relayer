@@ -27,6 +27,12 @@ interface IOGateway is IGateway {
     // Emitted when the middleware contract address is changed by the owner.
     event MiddlewareChanged(address indexed previousMiddleware, address indexed newMiddleware);
 
+    // Emitted when the middleware fails to apply an individual slash
+    event UnableToProcessIndividualSlash(IOGateway.Slash slash);
+
+    // Emitted when the middleware fails to apply the slash message
+    event UnableToProcessSlashMessage();
+
     // Slash struct, used to decode slashes, which are identified by
     // operatorKey to be slashed
     // slashFraction to be applied as parts per billion

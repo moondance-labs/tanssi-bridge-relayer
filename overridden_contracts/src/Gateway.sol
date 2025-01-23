@@ -62,9 +62,6 @@ contract Gateway is IOGateway, IInitializable, IUpgradable {
     using Address for address;
     using SafeNativeTransfer for address payable;
 
-    event UnableToProcessIndividualSlash(IOGateway.Slash slash);
-    event UnableToProcessSlashMessage();
-
     address public immutable AGENT_EXECUTOR;
 
     // Verification state

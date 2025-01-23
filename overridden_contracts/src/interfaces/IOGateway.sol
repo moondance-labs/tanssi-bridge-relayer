@@ -34,6 +34,11 @@ interface IOGateway is IGateway {
         uint256 timestamp;
     }
 
+    struct SlashParams {
+        uint256 eraIndex;
+        Slash[] slashes;
+    }
+
     function s_middleware() external view returns (address);
 
     function sendOperatorsData(bytes32[] calldata data) external;

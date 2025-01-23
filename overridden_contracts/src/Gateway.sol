@@ -451,17 +451,17 @@ contract Gateway is IOGateway, IInitializable, IUpgradable, Ownable {
         }
 
         // Decode
-        (IOGateway.Slash[] memory slashes) = abi.decode(data, (IOGateway.Slash[]));
+        (IOGateway.SlashParams memory slashes) = abi.decode(data, (IOGateway.SlashParams));
         IMiddlewareBasic middleware = IMiddlewareBasic(s_middleware);
 
         // At most it will be 10, defined by
         // https://github.com/moondance-labs/tanssi/blob/88e59e6e5afb198947690487f286b9ad7cd4cde6/chains/orchestrator-relays/runtime/dancelight/src/lib.rs#L1446
-        for (uint256 i = 0; i < slashes.length; ++i) {
-            uint48 epoch = middleware.getEpochAtTs(uint48(slashes[i].timestamp));
+        for (uint256 i = 0; i < slashes.slashes.length; ++i) {
+            uint48 epoch = middleware.getEpochAtTs(uint48(slashes.slashes[i].timestamp));
             //TODO maxDispatchGas should be probably be defined for all slashes, not only for one
-            try middleware.slash(epoch, slashes[i].operatorKey, slashes[i].slashFraction) {}
+            try middleware.slash(epoch, slashes[i].operatorKey, slashes.slashes[i].slashFraction) {}
             catch {
-                emit UnableToProcessIndividualSlash(slashes[i]);
+                emit UnableToProcessIndividualSlash(slashes.slashes[i]);
                 continue;
             }
         }

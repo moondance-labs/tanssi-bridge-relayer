@@ -30,7 +30,8 @@ interface IOGateway is IGateway {
     function s_middleware() external view returns(address);
 
     function sendOperatorsData(
-        bytes32[] calldata data
+        bytes32[] calldata data,
+        uint48 epoch
     ) external;
 
     function setMiddleware(

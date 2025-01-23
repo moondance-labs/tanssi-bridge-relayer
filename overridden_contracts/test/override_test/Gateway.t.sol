@@ -69,6 +69,7 @@ contract GatewayTest is Test {
 
     address public account1;
     address public account2;
+    address public middleware;
 
     uint64 public maxDispatchGas = 500_000;
     uint256 public maxRefund = 1 ether;
@@ -133,6 +134,7 @@ contract GatewayTest is Test {
 
         account1 = makeAddr("account1");
         account2 = makeAddr("account2");
+        middleware = makeAddr("middleware");
 
         // create tokens for account 1
         hoax(account1);
@@ -145,6 +147,9 @@ contract GatewayTest is Test {
         recipientAddress20 = multiAddressFromBytes20(bytes20(keccak256("recipient")));
 
         dotTokenID = bytes32(uint256(1));
+
+        // set middleware
+        IOGateway(address(gateway)).setMiddleware(middleware);
     }
 
     bytes private constant FINAL_VALIDATORS_PAYLOAD =
@@ -180,19 +185,24 @@ contract GatewayTest is Test {
     }
 
     function testSendOperatorsDataX() public {
+        // FINAL_VALIDATORS_PAYLOAD has been encoded with epoch 1.
+        uint48 epoch = 1;
+        
         // Create mock agent and paraID
-        vm.warp(1);
+        vm.prank(middleware);
         vm.expectEmit(true, false, false, true);
         emit IGateway.OutboundMessageAccepted(PRIMARY_GOVERNANCE_CHANNEL_ID, 1, messageID, FINAL_VALIDATORS_PAYLOAD);
 
-        IOGateway(address(gateway)).sendOperatorsData(VALIDATORS_DATA);
+        IOGateway(address(gateway)).sendOperatorsData(VALIDATORS_DATA, epoch);
     }
 
     function testShouldNotSendOperatorsDataBecauseOperatorsTooLong() public {
         bytes32[] memory longOperatorsData = createLongOperatorsData();
+        uint48 epoch = 42;
 
+        vm.prank(middleware);
         vm.expectRevert(Operators.Operators__OperatorsLengthTooLong.selector);
-        IOGateway(address(gateway)).sendOperatorsData(longOperatorsData);
+        IOGateway(address(gateway)).sendOperatorsData(longOperatorsData, epoch);
     }
 
     function testSendOperatorsDataWith50Entries() public {
@@ -206,13 +216,13 @@ contract GatewayTest is Test {
         // Get accounts array
         bytes32[] memory accounts = abi.decode(vm.parseJson(json, "$.accounts"), (bytes32[]));
 
-        uint64 timestamp = abi.decode(vm.parseJson(json, "$.timestamp"), (uint64));
-        vm.warp(timestamp);
+        uint48 epoch = abi.decode(vm.parseJson(json, "$.epoch"), (uint48));
 
+        vm.prank(middleware);
         vm.expectEmit(true, false, false, true);
         emit IGateway.OutboundMessageAccepted(PRIMARY_GOVERNANCE_CHANNEL_ID, 1, messageID, final_payload);
 
-        IOGateway(address(gateway)).sendOperatorsData(accounts);
+        IOGateway(address(gateway)).sendOperatorsData(accounts, epoch);
     }
 
     function testSendOperatorsDataWith400Entries() public {
@@ -225,13 +235,13 @@ contract GatewayTest is Test {
 
         // Get accounts array
         bytes32[] memory accounts = abi.decode(vm.parseJson(json, "$.accounts"), (bytes32[]));
-        uint64 timestamp = abi.decode(vm.parseJson(json, "$.timestamp"), (uint64));
-        vm.warp(timestamp);
+        uint48 epoch = abi.decode(vm.parseJson(json, "$.epoch"), (uint48));
 
+        vm.prank(middleware);
         vm.expectEmit(true, false, false, true);
         emit IGateway.OutboundMessageAccepted(PRIMARY_GOVERNANCE_CHANNEL_ID, 1, messageID, final_payload);
 
-        IOGateway(address(gateway)).sendOperatorsData(accounts);
+        IOGateway(address(gateway)).sendOperatorsData(accounts, epoch);
     }
 
     function testSendOperatorsDataWith1000Entries() public {
@@ -244,18 +254,18 @@ contract GatewayTest is Test {
 
         // Get accounts array
         bytes32[] memory accounts = abi.decode(vm.parseJson(json, "$.accounts"), (bytes32[]));
-        uint64 timestamp = abi.decode(vm.parseJson(json, "$.timestamp"), (uint64));
-        vm.warp(timestamp);
+        uint48 epoch = abi.decode(vm.parseJson(json, "$.epoch"), (uint48));
 
+        vm.prank(middleware);
         vm.expectEmit(true, false, false, true);
         emit IGateway.OutboundMessageAccepted(PRIMARY_GOVERNANCE_CHANNEL_ID, 1, messageID, final_payload);
 
-        IOGateway(address(gateway)).sendOperatorsData(accounts);
+        IOGateway(address(gateway)).sendOperatorsData(accounts, epoch);
     }
 
     function testOwnerCanChangeMiddleware() public {
         vm.expectEmit(true, true, false, false);
-        emit IOGateway.MiddlewareChanged(address(0), 0x0123456789012345678901234567890123456789);
+        emit IOGateway.MiddlewareChanged(address(middleware), 0x0123456789012345678901234567890123456789);
 
         IOGateway(address(gateway)).setMiddleware(0x0123456789012345678901234567890123456789);
 
@@ -265,7 +275,7 @@ contract GatewayTest is Test {
     function testNonOwnerCantChangeMiddleware() public {
         address notOwner = makeAddr("notOwner");
         vm.prank(notOwner);
-        vm.expectRevert("Ownable: caller is not the owner");
+        vm.expectRevert(abi.encodeWithSelector(Gateway.Unauthorized.selector));
         IOGateway(address(gateway)).setMiddleware(0x9876543210987654321098765432109876543210);
     }
 }

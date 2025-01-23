@@ -49,6 +49,7 @@ import {CoreStorage} from "./storage/CoreStorage.sol";
 import {PricingStorage} from "./storage/PricingStorage.sol";
 import {AssetsStorage} from "./storage/AssetsStorage.sol";
 import {OperatorStorage} from "./storage/OperatorStorage.sol";
+import {GatewayCoreStorage} from "./storage/GatewayCoreStorage.sol";
 
 import {UD60x18, ud60x18, convert} from "prb/math/src/UD60x18.sol";
 
@@ -57,7 +58,7 @@ import {Operators} from "./Operators.sol";
 import {IOGateway} from "./interfaces/IOGateway.sol";
 import {IMiddlewareBasic} from "./interfaces/IMiddlewareBasic.sol";
 
-contract Gateway is IOGateway, IInitializable, IUpgradable, Ownable {
+contract Gateway is IOGateway, IInitializable, IUpgradable {
     using Address for address;
     using SafeNativeTransfer for address payable;
 
@@ -92,9 +93,6 @@ contract Gateway is IOGateway, IInitializable, IUpgradable, Ownable {
 
     uint8 internal immutable FOREIGN_TOKEN_DECIMALS;
 
-    // Address of the middleware contract.
-    address public s_middleware;
-
     error InvalidProof();
     error InvalidNonce();
     error NotEnoughGas();
@@ -116,6 +114,24 @@ contract Gateway is IOGateway, IInitializable, IUpgradable, Ownable {
     // Message handlers can only be dispatched by the gateway itself
     modifier onlySelf() {
         if (msg.sender != address(this)) {
+            revert Unauthorized();
+        }
+        _;
+    }
+
+    // Can only be called by the owner of the contract.
+    modifier onlyOwner() {
+        GatewayCoreStorage.Layout storage layout = GatewayCoreStorage.layout();
+        if (msg.sender != layout.owner) {
+            revert Unauthorized();
+        }
+        _;
+    }
+
+    // Can only be called by the middleware
+    modifier onlyMiddleware() {
+        GatewayCoreStorage.Layout storage layout = GatewayCoreStorage.layout();
+        if (msg.sender != layout.middleware) {
             revert Unauthorized();
         }
         _;
@@ -514,8 +530,11 @@ contract Gateway is IOGateway, IInitializable, IUpgradable, Ownable {
         return Assets.tokenAddressOf(tokenID);
     }
 
-    function sendOperatorsData(bytes32[] calldata data) external {
-        Ticket memory ticket = Operators.encodeOperatorsData(data);
+    function sendOperatorsData(
+        bytes32[] calldata data,
+        uint48 epoch
+    ) external onlyMiddleware {
+        Ticket memory ticket = Operators.encodeOperatorsData(data, epoch);
         _submitOutboundToChannel(PRIMARY_GOVERNANCE_CHANNEL_ID, ticket.payload);
     }
 
@@ -765,9 +784,29 @@ contract Gateway is IOGateway, IInitializable, IUpgradable, Ownable {
         operatorStorage.operator = config.rescueOperator;
     }
 
+    function _transferOwnership(
+        address newOwner
+    ) internal {
+        GatewayCoreStorage.Layout storage layout = GatewayCoreStorage.layout();
+
+        address oldOwner = layout.owner;
+        layout.owner = newOwner;
+
+        emit OwnershipTransferred(oldOwner, newOwner);
+    }
+
+    function transferOwnership(
+        address newOwner
+    ) external onlyOwner {
+        _transferOwnership(newOwner);
+    }
+
     /// Changes the middleware address.
-    function setMiddleware(address middleware) external onlyOwner {
-        address oldMiddleware = s_middleware;
+    function setMiddleware(
+        address middleware
+    ) external onlyOwner {
+        GatewayCoreStorage.Layout storage layout = GatewayCoreStorage.layout();
+        address oldMiddleware = layout.middleware;
 
         if (middleware == address(0)) {
             revert CantSetMiddlewareToZeroAddress();
@@ -776,8 +815,13 @@ contract Gateway is IOGateway, IInitializable, IUpgradable, Ownable {
         if (middleware == oldMiddleware) {
             revert CantSetMiddlewareToSameAddress();
         }
-
-        s_middleware = middleware;
+        
+        layout.middleware = middleware;
         emit MiddlewareChanged(oldMiddleware, middleware);
+    }
+
+    function s_middleware() external view returns(address) {
+        GatewayCoreStorage.Layout storage layout = GatewayCoreStorage.layout();
+        return layout.middleware;
     }
 }

@@ -28,7 +28,10 @@ library Operators {
 
     uint16 private constant MAX_OPERATORS = 1000;
 
-    function encodeOperatorsData(bytes32[] calldata operatorsKeys) internal returns (Ticket memory ticket) {
+    function encodeOperatorsData(
+        bytes32[] calldata operatorsKeys,
+        uint48 epoch
+    ) internal returns (Ticket memory ticket) {
         if (operatorsKeys.length == 0) {
             revert Operators__OperatorsKeysCannotBeEmpty();
         }
@@ -43,7 +46,7 @@ library Operators {
         // TODO For now mock it to 0
         ticket.costs = Costs(0, 0);
 
-        ticket.payload = OSubstrateTypes.EncodedOperatorsData(operatorsKeys, uint32(validatorsKeysLength));
+        ticket.payload = OSubstrateTypes.EncodedOperatorsData(operatorsKeys, uint32(validatorsKeysLength), epoch);
         emit IOGateway.OperatorsDataCreated(validatorsKeysLength, ticket.payload);
     }
 }

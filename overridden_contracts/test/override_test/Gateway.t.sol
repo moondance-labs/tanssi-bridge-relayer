@@ -185,8 +185,6 @@ contract GatewayTest is Test {
     }
 
     function testSendOperatorsDataX() public {
-        IOGateway(address(gateway)).s_middleware();
-
         // 1 to match timestamp 1 of warp, as timestamp was used before to
         // generate FINAL_VALIDATORS_PAYLOAD
         uint48 epoch = 1;

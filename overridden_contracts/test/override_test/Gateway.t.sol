@@ -185,12 +185,10 @@ contract GatewayTest is Test {
     }
 
     function testSendOperatorsDataX() public {
-        // 1 to match timestamp 1 of warp, as timestamp was used before to
-        // generate FINAL_VALIDATORS_PAYLOAD
+        // FINAL_VALIDATORS_PAYLOAD has been encoded with epoch 1.
         uint48 epoch = 1;
         
         // Create mock agent and paraID
-        vm.warp(1);
         vm.prank(middleware);
         vm.expectEmit(true, false, false, true);
         emit IGateway.OutboundMessageAccepted(PRIMARY_GOVERNANCE_CHANNEL_ID, 1, messageID, FINAL_VALIDATORS_PAYLOAD);

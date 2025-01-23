@@ -3,6 +3,7 @@
 pragma solidity 0.8.25;
 
 import {MerkleProof} from "openzeppelin/utils/cryptography/MerkleProof.sol";
+import {Ownable} from "openzeppelin/access/Ownable.sol";
 import {Verification} from "./Verification.sol";
 import {Assets} from "./Assets.sol";
 import {AgentExecutor} from "./AgentExecutor.sol";
@@ -55,7 +56,7 @@ import {Operators} from "./Operators.sol";
 
 import {IOGateway} from "./interfaces/IOGateway.sol";
 
-contract Gateway is IOGateway, IInitializable, IUpgradable {
+contract Gateway is IOGateway, IInitializable, IUpgradable, Ownable {
     using Address for address;
     using SafeNativeTransfer for address payable;
 
@@ -87,6 +88,9 @@ contract Gateway is IOGateway, IInitializable, IUpgradable {
 
     uint8 internal immutable FOREIGN_TOKEN_DECIMALS;
 
+    // Address of the middleware contract.
+    address public s_middleware;
+
     error InvalidProof();
     error InvalidNonce();
     error NotEnoughGas();
@@ -101,6 +105,8 @@ contract Gateway is IOGateway, IInitializable, IUpgradable {
     error InvalidAgentExecutionPayload();
     error InvalidConstructorParams();
     error TokenNotRegistered();
+    error CantSetMiddlewareToZeroAddress();
+    error CantSetMiddlewareToSameAddress();
 
     // Message handlers can only be dispatched by the gateway itself
     modifier onlySelf() {
@@ -597,7 +603,7 @@ contract Gateway is IOGateway, IInitializable, IUpgradable {
         emit OutboundMessageAccepted(channelID, channel.outboundNonce, messageID, ticket.payload);
     }
 
-        // Submit an outbound message to a specific channel.
+    // Submit an outbound message to a specific channel.
     // Doesn't handle fees.
     function _submitOutboundToChannel(ChannelID channelID, bytes memory payload) internal {
         Channel storage channel = _ensureChannel(channelID);
@@ -688,7 +694,7 @@ contract Gateway is IOGateway, IInitializable, IUpgradable {
         address rescueOperator;
     }
 
-        /// Initialize storage within the `GatewayProxy` contract using this initializer.
+    /// Initialize storage within the `GatewayProxy` contract using this initializer.
     ///
     /// This initializer cannot be called externally via the proxy as the function selector
     /// is overshadowed in the proxy.
@@ -724,6 +730,8 @@ contract Gateway is IOGateway, IInitializable, IUpgradable {
         CoreStorage.Layout storage core = CoreStorage.layout();
 
         Config memory config = abi.decode(data, (Config));
+
+        _transferOwnership(msg.sender);
 
         core.mode = config.mode;
 
@@ -767,5 +775,23 @@ contract Gateway is IOGateway, IInitializable, IUpgradable {
         // Initialize operator storage
         OperatorStorage.Layout storage operatorStorage = OperatorStorage.layout();
         operatorStorage.operator = config.rescueOperator;
+    }
+
+    /// Changes the middleware address.
+    function setMiddleware(
+        address middleware
+    ) external onlyOwner {
+        address oldMiddleware = s_middleware;
+
+        if(middleware == address(0)) {
+            revert CantSetMiddlewareToZeroAddress();
+        }
+
+        if(middleware == oldMiddleware) {
+            revert CantSetMiddlewareToSameAddress();
+        }
+        
+        s_middleware = middleware;
+        emit MiddlewareChanged(oldMiddleware, middleware);
     }
 }

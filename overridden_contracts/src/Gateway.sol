@@ -123,6 +123,15 @@ contract Gateway is IOGateway, IInitializable, IUpgradable {
         _;
     }
 
+    // Can only be called by the middleware
+    modifier onlyMiddleware() {
+        GatewayCoreStorage.Layout storage layout = GatewayCoreStorage.layout();
+        if (msg.sender != layout.middleware) {
+            revert Unauthorized();
+        }
+        _;
+    }
+
     constructor(
         address beefyClient,
         address agentExecutor,
@@ -522,9 +531,10 @@ contract Gateway is IOGateway, IInitializable, IUpgradable {
     }
 
     function sendOperatorsData(
-        bytes32[] calldata data
-    ) external {
-        Ticket memory ticket = Operators.encodeOperatorsData(data);
+        bytes32[] calldata data,
+        uint48 epoch
+    ) external onlyMiddleware {
+        Ticket memory ticket = Operators.encodeOperatorsData(data, epoch);
         _submitOutboundToChannel(PRIMARY_GOVERNANCE_CHANNEL_ID, ticket.payload);
     }
 

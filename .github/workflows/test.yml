@@ -1,69 +1,73 @@
-name: CI
+# This workflow will test relayer
+
+name: Test
 
 on:
   push:
+    branches: [ "main" ]
   pull_request:
-  workflow_dispatch:
-
-env:
-  FOUNDRY_PROFILE: ci
+    branches: [ "main" ]
 
 jobs:
-  set-tags:
-    runs-on: ubuntu-latest
-    outputs:
-      git_ref: ${{ steps.check-git-ref.outputs.git_ref }}
-      git_branch: ${{ steps.check-git-ref.outputs.git_branch }}
-      git_target_branch: ${{ steps.check-git-ref.outputs.git_target_branch }}
-    steps:
-      - name: Check git ref
-        id: check-git-ref
-        # if PR
-        # else if manual PR
-        # else (push)
-        run: |
-          if [[ -n "${{ github.event.pull_request.head.sha }}" ]]; then
-            echo "git_branch=$(echo ${GITHUB_HEAD_REF})" >> $GITHUB_OUTPUT
-            echo "git_target_branch=$(echo ${GITHUB_BASE_REF})" >> $GITHUB_OUTPUT
-            echo "git_ref=${{ github.event.pull_request.head.sha }}" >> $GITHUB_OUTPUT
-          else
-            echo "git_branch=$(echo ${GITHUB_REF#refs/heads/})" >> $GITHUB_OUTPUT
-            echo "git_target_branch=$(echo ${GITHUB_REF#refs/heads/})" >> $GITHUB_OUTPUT
-            echo "git_ref=$GITHUB_REF" >> $GITHUB_OUTPUT
-          fi
-  check:
-    strategy:
-      fail-fast: true
 
-    name: Foundry project
+  test:
     runs-on: ubuntu-latest
-
-    needs: ["set-tags"]
     steps:
-      - uses: actions/checkout@v4
-        with:
+    - uses: actions/checkout@v4
+      with:
           submodules: recursive
 
-      - name: Install Foundry
-        uses: foundry-rs/foundry-toolchain@v1
-        with:
+    - name: Check jq
+      run: jq --version
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.23'
+
+    - name: Install Foundry
+      uses: foundry-rs/foundry-toolchain@v1
+      with:
           version: stable
 
-      - name: Show Forge version
-        run: |
-          forge --version
+    - name: Show Forge version
+      run: forge --version
 
-      - name: Run Forge fmt
-        run: |
-          forge fmt overridden_contracts/ --check
-        id: fmt
+    - name: Install abigen
+      run: go install github.com/ethereum/go-ethereum/cmd/abigen@v1.14.11
 
-      - name: Override contracts and Build
-        run: |
-          ./add_overridden_contracts.sh
+    - name: Check abigen
+      run: abigen --version
 
-      - name: Run Forge tests
-        run: |
-          cd snowbridge/contracts
-          forge test -vvv
-        id: test
+    - name: Install sszgen
+      run: go install github.com/ferranbt/fastssz/sszgen@v0.1.4
+
+    - name: Check sszgen
+      run: sszgen --help
+
+    - name: Install Mage
+      run: go install github.com/magefile/mage@v1.15.0
+
+    - name: Check mage
+      run: mage --version
+
+    - name: Run Forge fmt
+      run: |
+        forge fmt overridden_contracts/ --check
+      id: fmt
+
+    - name: Build
+      run: mage build
+
+    - name: Check if go contract bindings are up-to-date
+      run: git diff --exit-code ./relays/contracts || (echo "The contract bindings are not up-to-date against contracts." && exit 1)
+
+    - name: Test Relayer
+      run: mage test
+
+    - name: Run Forge tests
+      run: |
+        cd snowbridge/contracts
+        forge test -vvv
+      id: test
+

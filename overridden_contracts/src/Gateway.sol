@@ -49,13 +49,13 @@ import {CoreStorage} from "./storage/CoreStorage.sol";
 import {PricingStorage} from "./storage/PricingStorage.sol";
 import {AssetsStorage} from "./storage/AssetsStorage.sol";
 import {OperatorStorage} from "./storage/OperatorStorage.sol";
+import {GatewayCoreStorage} from "./storage/GatewayCoreStorage.sol";
 
 import {UD60x18, ud60x18, convert} from "prb/math/src/UD60x18.sol";
 
 import {Operators} from "./Operators.sol";
 
 import {IOGateway} from "./interfaces/IOGateway.sol";
-import {GatewayCoreStorage} from "./storage/GatewayCoreStorage.sol";
 
 contract Gateway is IOGateway, IInitializable, IUpgradable {
     using Address for address;

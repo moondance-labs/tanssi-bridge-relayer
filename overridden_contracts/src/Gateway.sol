@@ -459,7 +459,7 @@ contract Gateway is IOGateway, IInitializable, IUpgradable, Ownable {
         for (uint256 i = 0; i < slashes.slashes.length; ++i) {
             uint48 epoch = middleware.getEpochAtTs(uint48(slashes.slashes[i].timestamp));
             //TODO maxDispatchGas should be probably be defined for all slashes, not only for one
-            try middleware.slash(epoch, slashes[i].operatorKey, slashes.slashes[i].slashFraction) {}
+            try middleware.slash(epoch, slashes.slashes[i].operatorKey, slashes.slashes[i].slashFraction) {}
             catch {
                 emit UnableToProcessIndividualSlash(slashes.slashes[i]);
                 continue;

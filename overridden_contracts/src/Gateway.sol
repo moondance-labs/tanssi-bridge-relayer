@@ -461,14 +461,16 @@ contract Gateway is IOGateway, IInitializable, IUpgradable {
 
     // @dev Mint foreign token from polkadot
     function reportSlashes(bytes calldata data) external onlySelf {
+        GatewayCoreStorage.Layout storage layout = GatewayCoreStorage.layout();
+        address middlewareAddress = layout.middleware;
         // Dont process message if we dont have a middleware set
-        if (s_middleware == address(0)) {
+        if (middlewareAddress == address(0)) {
             revert MiddlewareNotSet();
         }
 
         // Decode
         (IOGateway.SlashParams memory slashes) = abi.decode(data, (IOGateway.SlashParams));
-        IMiddlewareBasic middleware = IMiddlewareBasic(s_middleware);
+        IMiddlewareBasic middleware = IMiddlewareBasic(middlewareAddress);
 
         // At most it will be 10, defined by
         // https://github.com/moondance-labs/tanssi/blob/88e59e6e5afb198947690487f286b9ad7cd4cde6/chains/orchestrator-relays/runtime/dancelight/src/lib.rs#L1446

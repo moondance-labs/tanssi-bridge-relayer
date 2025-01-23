@@ -21,6 +21,9 @@ interface IOGateway is IGateway {
     // Emitted when operators data has been created
     event OperatorsDataCreated(uint256 indexed validatorsCount, bytes payload);
 
+    // Emitted when owner of the gateway is changed.
+    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
+
     // Emitted when the middleware contract address is changed by the owner.
     event MiddlewareChanged(address indexed previousMiddleware, address indexed newMiddleware);
 

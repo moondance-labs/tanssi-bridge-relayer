@@ -8,10 +8,15 @@ import {console} from "forge-std/console.sol";
 import {BeefyClient} from "../src/BeefyClient.sol";
 
 import {IGateway} from "../src/interfaces/IGateway.sol";
+import {IOGateway} from "../src/interfaces/IOGateway.sol";
 import {IInitializable} from "../src/interfaces/IInitializable.sol";
 import {IUpgradable} from "../src/interfaces/IUpgradable.sol";
+import {IMiddlewareBasic} from "../src/interfaces/IMiddlewareBasic.sol";
 import {Gateway} from "../src/Gateway.sol";
 import {MockGateway} from "./mocks/MockGateway.sol";
+import {MockOMiddlewareReverter} from "./mocks/MockOMiddlewareReverter.sol";
+import {MockOMiddlewareProcessor} from "./mocks/MockOMiddlewareProcessor.sol";
+
 import {MockGatewayV2} from "./mocks/MockGatewayV2.sol";
 import {GatewayProxy} from "../src/GatewayProxy.sol";
 
@@ -158,6 +163,13 @@ contract GatewayTest is Test {
 
     function makeCreateAgentCommand() public pure returns (Command, bytes memory) {
         return (Command.CreateAgent, abi.encode((keccak256("6666"))));
+    }
+
+    function makeReportSlashesCommand() public pure returns (Command, bytes memory) {
+        IOGateway.Slash[] memory slashes = new IOGateway.Slash[](1);
+        slashes[0] = IOGateway.Slash({operatorKey: bytes32(uint256(1)), slashFraction: 500_000, timestamp: 1});
+        uint256 eraIndex = 1;
+        return (Command.ReportSlashes, abi.encode(IOGateway.SlashParams({eraIndex: eraIndex, slashes: slashes})));
     }
 
     function makeMockProof() public pure returns (Verification.Proof memory) {
@@ -1006,5 +1018,96 @@ contract GatewayTest is Test {
 
         bytes memory encodedParams = abi.encode(params);
         MockGateway(address(gateway)).agentExecutePublic(encodedParams);
+    }
+
+    // middleware not set, should not be able to process slash
+    function testSubmitSlashesWithoutMiddleware() public {
+        deal(assetHubAgent, 50 ether);
+
+        (Command command, bytes memory params) = makeReportSlashesCommand();
+
+        vm.expectEmit(true, true, true, true);
+        emit Gateway.UnableToProcessSlashMessage();
+        // Expect the gateway to emit `InboundMessageDispatched`
+        vm.expectEmit(true, false, false, false);
+        emit IGateway.InboundMessageDispatched(assetHubParaID.into(), 1, messageID, true);
+
+        hoax(relayer, 1 ether);
+        IGateway(address(gateway)).submitV1(
+            InboundMessage(assetHubParaID.into(), 1, command, params, maxDispatchGas, maxRefund, reward, messageID),
+            proof,
+            makeMockProof()
+        );
+    }
+
+    // middleware set, but not complying with the interface, should not process slash
+    function testSubmitSlashesWithMiddlewareNotComplyingInterface() public {
+        deal(assetHubAgent, 50 ether);
+
+        (Command command, bytes memory params) = makeReportSlashesCommand();
+
+        IOGateway(address(gateway)).setMiddleware(0x0123456789012345678901234567890123456789);
+
+        // Expect the gateway to emit `InboundMessageDispatched`
+        vm.expectEmit(true, true, true, true);
+        emit Gateway.UnableToProcessSlashMessage();
+        vm.expectEmit(true, false, false, false);
+        emit IGateway.InboundMessageDispatched(assetHubParaID.into(), 1, messageID, true);
+
+        hoax(relayer, 1 ether);
+        IGateway(address(gateway)).submitV1(
+            InboundMessage(assetHubParaID.into(), 1, command, params, maxDispatchGas, maxRefund, reward, messageID),
+            proof,
+            makeMockProof()
+        );
+    }
+
+    // middleware set, complying interface but slash reverts
+    function testSubmitSlashesWithMiddlewareComplyingInterfaceAndSlashRevert() public {
+        deal(assetHubAgent, 50 ether);
+
+        (Command command, bytes memory params) = makeReportSlashesCommand();
+
+        IMiddlewareBasic middleware = new MockOMiddlewareReverter();
+
+        IOGateway(address(gateway)).setMiddleware(address(middleware));
+
+        IOGateway.Slash memory expectedSlash =
+            IOGateway.Slash({operatorKey: bytes32(uint256(1)), slashFraction: 500_000, timestamp: 1});
+
+        vm.expectEmit(true, true, true, true);
+        emit Gateway.UnableToProcessIndividualSlash(expectedSlash);
+        vm.expectEmit(true, false, false, false);
+        emit IGateway.InboundMessageDispatched(assetHubParaID.into(), 1, messageID, true);
+
+        hoax(relayer, 1 ether);
+        IGateway(address(gateway)).submitV1(
+            InboundMessage(assetHubParaID.into(), 1, command, params, maxDispatchGas, maxRefund, reward, messageID),
+            proof,
+            makeMockProof()
+        );
+    }
+
+    // middleware set, complying interface and slash processed
+    function testSubmitSlashesWithMiddlewareComplyingInterfaceAndSlashProcessed() public {
+        deal(assetHubAgent, 50 ether);
+
+        (Command command, bytes memory params) = makeReportSlashesCommand();
+
+        IMiddlewareBasic middleware = new MockOMiddlewareProcessor();
+
+        IOGateway(address(gateway)).setMiddleware(address(middleware));
+
+        vm.expectEmit(true, true, true, true);
+        emit MockOMiddlewareProcessor.SlashProcessed();
+        vm.expectEmit(true, false, false, false);
+        emit IGateway.InboundMessageDispatched(assetHubParaID.into(), 1, messageID, true);
+
+        hoax(relayer, 1 ether);
+        IGateway(address(gateway)).submitV1(
+            InboundMessage(assetHubParaID.into(), 1, command, params, maxDispatchGas, maxRefund, reward, messageID),
+            proof,
+            makeMockProof()
+        );
     }
 }

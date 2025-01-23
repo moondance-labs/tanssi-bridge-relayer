@@ -446,7 +446,7 @@ contract Gateway is IOGateway, IInitializable, IUpgradable, Ownable {
     // @dev Mint foreign token from polkadot
     function reportSlashes(bytes calldata data) external onlySelf {
         // Dont process message if we dont have a middleware set
-        if (s_middleware != address(0)) {
+        if (s_middleware == address(0)) {
             revert MiddlewareNotSet();
         }
 

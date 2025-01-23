@@ -28,10 +28,16 @@ interface IOGateway is IGateway {
     event MiddlewareChanged(address indexed previousMiddleware, address indexed newMiddleware);
 
     // Emitted when the middleware fails to apply an individual slash
-    event UnableToProcessIndividualSlash(IOGateway.Slash slash);
+    event UnableToProcessIndividualSlash(IOGateway.Slash slash, bytes error);
+
+    // Emitted when the middleware fails to apply an individual slash
+    event UnableToProcessIndividualSlash(IOGateway.Slash slash, string error);
 
     // Emitted when the middleware fails to apply the slash message
-    event UnableToProcessSlashMessage();
+    event UnableToProcessSlashMessage(bytes error);
+
+    // Emitted when the middleware fails to apply the slash message
+    event UnableToProcessSlashMessage(string error);
 
     // Slash struct, used to decode slashes, which are identified by
     // operatorKey to be slashed

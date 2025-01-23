@@ -260,8 +260,11 @@ contract Gateway is IOGateway, IInitializable, IUpgradable {
         } else if (message.command == Command.ReportSlashes) {
             // We need to put all this inside a generic try-catch, since we dont want to revert decoding nor anything
             try Gateway(this).reportSlashes{gas: maxDispatchGas}(message.params) {}
-            catch {
-                emit UnableToProcessSlashMessage();
+            catch Error(string memory err) {
+                emit UnableToProcessSlashMessage(err);
+                success = false;
+            } catch (bytes memory err) {
+                emit UnableToProcessSlashMessage(err);
                 success = false;
             }
         }
@@ -475,8 +478,11 @@ contract Gateway is IOGateway, IInitializable, IUpgradable {
             uint48 epoch = middleware.getEpochAtTs(uint48(slashes.slashes[i].timestamp));
             //TODO maxDispatchGas should be probably be defined for all slashes, not only for one
             try middleware.slash(epoch, slashes.slashes[i].operatorKey, slashes.slashes[i].slashFraction) {}
-            catch {
-                emit UnableToProcessIndividualSlash(slashes.slashes[i]);
+            catch Error(string memory err) {
+                emit UnableToProcessIndividualSlash(slashes.slashes[i], err);
+                continue;
+            } catch (bytes memory err) {
+                emit UnableToProcessIndividualSlash(slashes.slashes[i], err);
                 continue;
             }
         }

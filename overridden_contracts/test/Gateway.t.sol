@@ -1027,7 +1027,7 @@ contract GatewayTest is Test {
         (Command command, bytes memory params) = makeReportSlashesCommand();
 
         vm.expectEmit(true, true, true, true);
-        emit IOGateway.UnableToProcessSlashMessage();
+        emit IOGateway.UnableToProcessSlashMessage(abi.encodeWithSelector(Gateway.MiddlewareNotSet.selector));
         // Expect the gateway to emit `InboundMessageDispatched`
         vm.expectEmit(true, false, false, false);
         emit IGateway.InboundMessageDispatched(assetHubParaID.into(), 1, messageID, true);
@@ -1048,9 +1048,12 @@ contract GatewayTest is Test {
 
         IOGateway(address(gateway)).setMiddleware(0x0123456789012345678901234567890123456789);
 
+        bytes memory empty;
         // Expect the gateway to emit `InboundMessageDispatched`
+        // For some reason when you are loading an address not complying an interface, you get an empty message
+        // It still serves us to know that this is the reason
         vm.expectEmit(true, true, true, true);
-        emit IOGateway.UnableToProcessSlashMessage();
+        emit IOGateway.UnableToProcessSlashMessage(empty);
         vm.expectEmit(true, false, false, false);
         emit IGateway.InboundMessageDispatched(assetHubParaID.into(), 1, messageID, true);
 
@@ -1075,8 +1078,9 @@ contract GatewayTest is Test {
         IOGateway.Slash memory expectedSlash =
             IOGateway.Slash({operatorKey: bytes32(uint256(1)), slashFraction: 500_000, timestamp: 1});
 
+        string memory expectedError = "no process slash";
         vm.expectEmit(true, true, true, true);
-        emit IOGateway.UnableToProcessIndividualSlash(expectedSlash);
+        emit IOGateway.UnableToProcessIndividualSlash(expectedSlash, expectedError);
         vm.expectEmit(true, false, false, false);
         emit IGateway.InboundMessageDispatched(assetHubParaID.into(), 1, messageID, true);
 

@@ -33,6 +33,14 @@ interface IOGateway is IGateway {
         uint256 slashFraction;
         uint256 timestamp;
     }
+    
+    function s_middleware() external view returns(address);
 
-    function sendOperatorsData(bytes32[] calldata data) external;
+    function sendOperatorsData(
+        bytes32[] calldata data
+    ) external;
+
+    function setMiddleware(
+        address middleware
+    ) external;
 }

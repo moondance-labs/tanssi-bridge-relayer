@@ -719,6 +719,8 @@ contract Gateway is IOGateway, IInitializable, IUpgradable, Ownable {
 
         Config memory config = abi.decode(data, (Config));
 
+        _transferOwnership(msg.sender);
+
         core.mode = config.mode;
 
         // Initialize agent for BridgeHub

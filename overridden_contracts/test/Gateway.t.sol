@@ -170,6 +170,16 @@ contract GatewayTest is Test {
         return (Command.ReportSlashes, abi.encode(IOGateway.SlashParams({eraIndex: eraIndex, slashes: slashes})));
     }
 
+    function _makeReportRewardsCommand() public pure returns (Command, bytes memory) {
+        uint256 epoch = 0;
+        uint256 eraIndex = 1;
+        uint256 totalPointsToken = 1 ether;
+        uint256 tokensInflatedToken = 1 ether;
+        bytes32 rewardsRoot = bytes32(uint256(1));
+
+        return (Command.ReportRewards, abi.encode(epoch, eraIndex, totalPointsToken, tokensInflatedToken, rewardsRoot));
+    }
+
     function makeMockProof() public pure returns (Verification.Proof memory) {
         return Verification.Proof({
             leafPartial: Verification.MMRLeafPartial({
@@ -1130,6 +1140,143 @@ contract GatewayTest is Test {
         for (uint256 i = 0; i < entries.length; i++) {
             assertNotEq(entries[i].topics[0], IOGateway.UnableToProcessIndividualSlashB.selector);
             assertNotEq(entries[i].topics[0], IOGateway.UnableToProcessIndividualSlashS.selector);
+        }
+    }
+
+    function testSubmitRewards() public {
+        deal(assetHubAgent, 50 ether);
+
+        (Command command, bytes memory params) = _makeReportRewardsCommand();
+
+        // We mock the call so that it does not revert
+        vm.mockCall(address(1), abi.encodeWithSelector(IMiddlewareBasic.distributeRewards.selector), abi.encode(true));
+
+        IOGateway(address(gateway)).setMiddleware(address(1));
+
+        // Expect the gateway to emit `InboundMessageDispatched`
+        vm.expectEmit(true, true, true, true);
+        emit IGateway.InboundMessageDispatched(assetHubParaID.into(), 1, messageID, true);
+
+        hoax(relayer, 1 ether);
+        IGateway(address(gateway)).submitV1(
+            InboundMessage(assetHubParaID.into(), 1, command, params, maxDispatchGas, maxRefund, reward, messageID),
+            proof,
+            makeMockProof()
+        );
+    }
+
+    function testSubmitRewardsWithoutMiddleware() public {
+        deal(assetHubAgent, 50 ether);
+
+        (Command command, bytes memory params) = _makeReportRewardsCommand();
+
+        vm.expectEmit(true, true, true, true);
+        emit IOGateway.UnableToProcessRewardsMessageB(abi.encodeWithSelector(Gateway.MiddlewareNotSet.selector));
+        // Expect the gateway to emit `InboundMessageDispatched`
+        vm.expectEmit(true, true, true, true);
+        emit IGateway.InboundMessageDispatched(assetHubParaID.into(), 1, messageID, false);
+
+        hoax(relayer, 1 ether);
+        IGateway(address(gateway)).submitV1(
+            InboundMessage(assetHubParaID.into(), 1, command, params, maxDispatchGas, maxRefund, reward, messageID),
+            proof,
+            makeMockProof()
+        );
+    }
+
+    // middleware set, but not complying with the interface, should not process rewards
+    function testSubmitRewardsWithMiddlewareNotComplyingInterface() public {
+        deal(assetHubAgent, 50 ether);
+
+        (Command command, bytes memory params) = _makeReportRewardsCommand();
+
+        IOGateway(address(gateway)).setMiddleware(0x0123456789012345678901234567890123456789);
+
+        bytes memory empty;
+        // Expect the gateway to emit `InboundMessageDispatched`
+        // For some reason when you are loading an address not complying an interface, you get an empty message
+        // It still serves us to know that this is the reason
+        vm.expectEmit(true, true, true, true);
+        emit IOGateway.UnableToProcessRewardsMessageB(empty);
+        vm.expectEmit(true, true, true, true);
+        emit IGateway.InboundMessageDispatched(assetHubParaID.into(), 1, messageID, false);
+
+        hoax(relayer, 1 ether);
+        IGateway(address(gateway)).submitV1(
+            InboundMessage(assetHubParaID.into(), 1, command, params, maxDispatchGas, maxRefund, reward, messageID),
+            proof,
+            makeMockProof()
+        );
+    }
+
+    // middleware set, complying interface but rewards reverts
+    function testSubmitRewardsWithMiddlewareComplyingInterfaceAndRewardsRevert() public {
+        deal(assetHubAgent, 50 ether);
+
+        (Command command, bytes memory params) = _makeReportRewardsCommand();
+
+        bytes memory expectedError = bytes("can't process rewards"); //This should actually come from IODefaultOperatorRewards
+
+        // We mock the call so that it reverts
+        vm.mockCallRevert(
+            address(1), abi.encodeWithSelector(IMiddlewareBasic.distributeRewards.selector), "can't process rewards"
+        );
+
+        IOGateway(address(gateway)).setMiddleware(address(1));
+
+        uint256 expectedEpoch = 0;
+        uint256 expectedEraIndex = 1;
+        uint256 expectedTotalPointsToken = 1 ether;
+        uint256 expectedTotalTokensInflated = 1 ether;
+        bytes32 expectedRewardsRoot = bytes32(uint256(1));
+
+        vm.expectEmit(true, true, true, true);
+        emit IOGateway.UnableToProcessRewardsB(
+            expectedEpoch,
+            expectedEraIndex,
+            expectedTotalPointsToken,
+            expectedTotalTokensInflated,
+            expectedRewardsRoot,
+            expectedError
+        );
+        vm.expectEmit(true, true, true, true);
+        emit IGateway.InboundMessageDispatched(assetHubParaID.into(), 1, messageID, true);
+
+        hoax(relayer, 1 ether);
+        IGateway(address(gateway)).submitV1(
+            InboundMessage(assetHubParaID.into(), 1, command, params, maxDispatchGas, maxRefund, reward, messageID),
+            proof,
+            makeMockProof()
+        );
+    }
+
+    // middleware set, complying interface and rewards processed
+    function testSubmitRewardsWithMiddlewareComplyingInterfaceAndRewardsProcessed() public {
+        deal(assetHubAgent, 50 ether);
+
+        (Command command, bytes memory params) = _makeReportRewardsCommand();
+
+        // We mock the call so that it does not revert
+        vm.mockCall(address(1), abi.encodeWithSelector(IMiddlewareBasic.distributeRewards.selector), abi.encode(true));
+
+        IOGateway(address(gateway)).setMiddleware(address(1));
+
+        vm.expectEmit(true, true, true, true);
+        emit IGateway.InboundMessageDispatched(assetHubParaID.into(), 1, messageID, true);
+
+        hoax(relayer, 1 ether);
+        vm.recordLogs();
+        IGateway(address(gateway)).submitV1(
+            InboundMessage(assetHubParaID.into(), 1, command, params, maxDispatchGas, maxRefund, reward, messageID),
+            proof,
+            makeMockProof()
+        );
+
+        Vm.Log[] memory entries = vm.getRecordedLogs();
+        // We assert none of the rewards error events has been emitted
+        for (uint256 i = 0; i < entries.length; i++) {
+            assertNotEq(entries[i].topics[0], IOGateway.UnableToProcessRewardsMessageB.selector);
+            assertNotEq(entries[i].topics[0], IOGateway.UnableToProcessRewardsMessageS.selector);
         }
     }
 }

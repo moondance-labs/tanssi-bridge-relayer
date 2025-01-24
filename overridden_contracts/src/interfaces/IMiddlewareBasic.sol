@@ -16,21 +16,17 @@ pragma solidity ^0.8.0;
 
 interface IMiddlewareBasic {
     /**
-     * @notice Distributes rewards
-     * @param epoch The epoch of the rewards distribution
-     * @param eraIndex The era index of the rewards distribution
-     * @param totalPointsToken The total points token
-     * @param tokensInflatedToken The total tokens inflated token
-     * @param rewardsRoot The rewards root
-     * @dev This function is called by the gateway only
+     * @notice Distribute rewards for a specific era contained in an epoch by providing a Merkle root, total points, and total amount of tokens.
+     * @param epoch network epoch of the middleware
+     * @param eraIndex era index of Starlight's rewards distribution
+     * @param totalPointsToken total amount of points for the reward distribution
+     * @param amount amount of tokens to distribute
+     * @param root Merkle root of the reward distribution
+     * @dev Emit DistributeRewards event.
      */
-    function distributeRewards(
-        uint256 epoch,
-        uint256 eraIndex,
-        uint256 totalPointsToken,
-        uint256 tokensInflatedToken,
-        bytes32 rewardsRoot
-    ) external;
+    function distributeRewards(uint256 epoch, uint256 eraIndex, uint256 totalPointsToken, uint256 amount, bytes32 root)
+        external;
+
     /**
      * @notice Slashes an operator's stake
      * @dev Only the owner can call this function

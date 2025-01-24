@@ -155,7 +155,7 @@ contract BeefyClientTest is Test {
         uint32 nextAuthoritySetLen = uint32(beefyCommitmentRaw.readUint(".params.leaf.nextAuthoritySetLen"));
         bytes32 nextAuthoritySetRoot = beefyCommitmentRaw.readBytes32(".params.leaf.nextAuthoritySetRoot");
         bytes32 parachainHeadsRoot = beefyCommitmentRaw.readBytes32(".params.leaf.parachainHeadsRoot");
-         bytes32 messageCommitment = beefyCommitmentRaw.readBytes32(".params.leaf.messageCommitment");
+        bytes32 messageCommitment = beefyCommitmentRaw.readBytes32(".params.leaf.messageCommitment");
         mmrLeaf = BeefyClient.MMRLeaf(
             version,
             parentNumber,
@@ -165,7 +165,6 @@ contract BeefyClientTest is Test {
             nextAuthoritySetRoot,
             parachainHeadsRoot,
             messageCommitment
-
         );
     }
 

@@ -56,6 +56,7 @@ import {UD60x18, ud60x18, convert} from "prb/math/src/UD60x18.sol";
 import {Operators} from "./Operators.sol";
 
 import {IOGateway} from "./interfaces/IOGateway.sol";
+import {IMiddlewareBasic} from "./interfaces/IMiddlewareBasic.sol";
 
 contract Gateway is IOGateway, IInitializable, IUpgradable {
     using Address for address;
@@ -105,6 +106,7 @@ contract Gateway is IOGateway, IInitializable, IUpgradable {
     error TokenNotRegistered();
     error CantSetMiddlewareToZeroAddress();
     error CantSetMiddlewareToSameAddress();
+    error MiddlewareNotSet();
 
     // Message handlers can only be dispatched by the gateway itself
     modifier onlySelf() {
@@ -255,6 +257,16 @@ contract Gateway is IOGateway, IInitializable, IUpgradable {
             catch {
                 success = false;
             }
+        } else if (message.command == Command.ReportSlashes) {
+            // We need to put all this inside a generic try-catch, since we dont want to revert decoding nor anything
+            try Gateway(this).reportSlashes{gas: maxDispatchGas}(message.params) {}
+            catch Error(string memory err) {
+                emit UnableToProcessSlashMessageS(err);
+                success = false;
+            } catch (bytes memory err) {
+                emit UnableToProcessSlashMessageB(err);
+                success = false;
+            }
         }
 
         // Calculate a gas refund, capped to protect against huge spikes in `tx.gasprice`
@@ -281,23 +293,17 @@ contract Gateway is IOGateway, IInitializable, IUpgradable {
         return CoreStorage.layout().mode;
     }
 
-    function channelOperatingModeOf(
-        ChannelID channelID
-    ) external view returns (OperatingMode) {
+    function channelOperatingModeOf(ChannelID channelID) external view returns (OperatingMode) {
         Channel storage ch = _ensureChannel(channelID);
         return ch.mode;
     }
 
-    function channelNoncesOf(
-        ChannelID channelID
-    ) external view returns (uint64, uint64) {
+    function channelNoncesOf(ChannelID channelID) external view returns (uint64, uint64) {
         Channel storage ch = _ensureChannel(channelID);
         return (ch.inboundNonce, ch.outboundNonce);
     }
 
-    function agentOf(
-        bytes32 agentID
-    ) external view returns (address) {
+    function agentOf(bytes32 agentID) external view returns (address) {
         return _ensureAgent(agentID);
     }
 
@@ -315,9 +321,7 @@ contract Gateway is IOGateway, IInitializable, IUpgradable {
      */
 
     // Execute code within an agent
-    function agentExecute(
-        bytes calldata data
-    ) external onlySelf {
+    function agentExecute(bytes calldata data) external onlySelf {
         AgentExecuteParams memory params = abi.decode(data, (AgentExecuteParams));
 
         address agent = _ensureAgent(params.agentID);
@@ -335,9 +339,7 @@ contract Gateway is IOGateway, IInitializable, IUpgradable {
     }
 
     /// @dev Create an agent for a consensus system on Polkadot
-    function createAgent(
-        bytes calldata data
-    ) external onlySelf {
+    function createAgent(bytes calldata data) external onlySelf {
         CoreStorage.Layout storage $ = CoreStorage.layout();
 
         CreateAgentParams memory params = abi.decode(data, (CreateAgentParams));
@@ -354,9 +356,7 @@ contract Gateway is IOGateway, IInitializable, IUpgradable {
     }
 
     /// @dev Create a messaging channel for a Polkadot parachain
-    function createChannel(
-        bytes calldata data
-    ) external onlySelf {
+    function createChannel(bytes calldata data) external onlySelf {
         CoreStorage.Layout storage $ = CoreStorage.layout();
 
         CreateChannelParams memory params = abi.decode(data, (CreateChannelParams));
@@ -379,9 +379,7 @@ contract Gateway is IOGateway, IInitializable, IUpgradable {
     }
 
     /// @dev Update the configuration for a channel
-    function updateChannel(
-        bytes calldata data
-    ) external onlySelf {
+    function updateChannel(bytes calldata data) external onlySelf {
         UpdateChannelParams memory params = abi.decode(data, (UpdateChannelParams));
 
         Channel storage ch = _ensureChannel(params.channelID);
@@ -396,17 +394,13 @@ contract Gateway is IOGateway, IInitializable, IUpgradable {
     }
 
     /// @dev Perform an upgrade of the gateway
-    function upgrade(
-        bytes calldata data
-    ) external onlySelf {
+    function upgrade(bytes calldata data) external onlySelf {
         UpgradeParams memory params = abi.decode(data, (UpgradeParams));
         Upgrade.upgrade(params.impl, params.implCodeHash, params.initParams);
     }
 
     // @dev Set the operating mode of the gateway
-    function setOperatingMode(
-        bytes calldata data
-    ) external onlySelf {
+    function setOperatingMode(bytes calldata data) external onlySelf {
         CoreStorage.Layout storage $ = CoreStorage.layout();
         SetOperatingModeParams memory params = abi.decode(data, (SetOperatingModeParams));
         $.mode = params.mode;
@@ -414,9 +408,7 @@ contract Gateway is IOGateway, IInitializable, IUpgradable {
     }
 
     // @dev Transfer funds from an agent to a recipient account
-    function transferNativeFromAgent(
-        bytes calldata data
-    ) external onlySelf {
+    function transferNativeFromAgent(bytes calldata data) external onlySelf {
         TransferNativeFromAgentParams memory params = abi.decode(data, (TransferNativeFromAgentParams));
 
         address agent = _ensureAgent(params.agentID);
@@ -426,9 +418,7 @@ contract Gateway is IOGateway, IInitializable, IUpgradable {
     }
 
     // @dev Set token fees of the gateway
-    function setTokenTransferFees(
-        bytes calldata data
-    ) external onlySelf {
+    function setTokenTransferFees(bytes calldata data) external onlySelf {
         AssetsStorage.Layout storage $ = AssetsStorage.layout();
         SetTokenTransferFeesParams memory params = abi.decode(data, (SetTokenTransferFeesParams));
         $.assetHubCreateAssetFee = params.assetHubCreateAssetFee;
@@ -438,9 +428,7 @@ contract Gateway is IOGateway, IInitializable, IUpgradable {
     }
 
     // @dev Set pricing params of the gateway
-    function setPricingParameters(
-        bytes calldata data
-    ) external onlySelf {
+    function setPricingParameters(bytes calldata data) external onlySelf {
         PricingStorage.Layout storage pricing = PricingStorage.layout();
         SetPricingParametersParams memory params = abi.decode(data, (SetPricingParametersParams));
         pricing.exchangeRate = params.exchangeRate;
@@ -453,33 +441,58 @@ contract Gateway is IOGateway, IInitializable, IUpgradable {
      * Assets
      */
     // @dev Register a new fungible Polkadot token for an agent
-    function registerForeignToken(
-        bytes calldata data
-    ) external onlySelf {
+    function registerForeignToken(bytes calldata data) external onlySelf {
         RegisterForeignTokenParams memory params = abi.decode(data, (RegisterForeignTokenParams));
         Assets.registerForeignToken(params.foreignTokenID, params.name, params.symbol, params.decimals);
     }
 
     // @dev Mint foreign token from polkadot
-    function mintForeignToken(
-        bytes calldata data
-    ) external onlySelf {
+    function mintForeignToken(bytes calldata data) external onlySelf {
         MintForeignTokenParams memory params = abi.decode(data, (MintForeignTokenParams));
         Assets.mintForeignToken(params.foreignTokenID, params.recipient, params.amount);
     }
 
     // @dev Transfer Ethereum native token back from polkadot
-    function transferNativeToken(
-        bytes calldata data
-    ) external onlySelf {
+    function transferNativeToken(bytes calldata data) external onlySelf {
         TransferNativeTokenParams memory params = abi.decode(data, (TransferNativeTokenParams));
         address agent = _ensureAgent(params.agentID);
         Assets.transferNativeToken(AGENT_EXECUTOR, agent, params.token, params.recipient, params.amount);
     }
 
-    function isTokenRegistered(
-        address token
-    ) external view returns (bool) {
+    // @dev Mint foreign token from polkadot
+    function reportSlashes(bytes calldata data) external onlySelf {
+        GatewayCoreStorage.Layout storage layout = GatewayCoreStorage.layout();
+        address middlewareAddress = layout.middleware;
+        // Dont process message if we dont have a middleware set
+        if (middlewareAddress == address(0)) {
+            revert MiddlewareNotSet();
+        }
+
+        // Decode
+        (IOGateway.SlashParams memory slashes) = abi.decode(data, (IOGateway.SlashParams));
+        IMiddlewareBasic middleware = IMiddlewareBasic(middlewareAddress);
+
+        // At most it will be 10, defined by
+        // https://github.com/moondance-labs/tanssi/blob/88e59e6e5afb198947690487f286b9ad7cd4cde6/chains/orchestrator-relays/runtime/dancelight/src/lib.rs#L1446
+        for (uint256 i = 0; i < slashes.slashes.length; ++i) {
+            uint48 epoch = middleware.getEpochAtTs(uint48(slashes.slashes[i].timestamp));
+            //TODO maxDispatchGas should be probably be defined for all slashes, not only for one
+            try middleware.slash(epoch, slashes.slashes[i].operatorKey, slashes.slashes[i].slashFraction) {}
+            catch Error(string memory err) {
+                emit UnableToProcessIndividualSlashS(
+                    slashes.slashes[i].operatorKey, slashes.slashes[i].slashFraction, slashes.slashes[i].timestamp, err
+                );
+                continue;
+            } catch (bytes memory err) {
+                emit UnableToProcessIndividualSlashB(
+                    slashes.slashes[i].operatorKey, slashes.slashes[i].slashFraction, slashes.slashes[i].timestamp, err
+                );
+                continue;
+            }
+        }
+    }
+
+    function isTokenRegistered(address token) external view returns (bool) {
         return Assets.isTokenRegistered(token);
     }
 
@@ -493,18 +506,16 @@ contract Gateway is IOGateway, IInitializable, IUpgradable {
     }
 
     // Register an Ethereum-native token in the gateway and on AssetHub
-    function registerToken(
-        address token
-    ) external payable {
+    function registerToken(address token) external payable {
         _submitOutbound(Assets.registerToken(token));
     }
 
     // Total fee for sending a token
-    function quoteSendTokenFee(
-        address token,
-        ParaID destinationChain,
-        uint128 destinationFee
-    ) external view returns (uint256) {
+    function quoteSendTokenFee(address token, ParaID destinationChain, uint128 destinationFee)
+        external
+        view
+        returns (uint256)
+    {
         return _calculateFee(Assets.sendTokenCosts(token, destinationChain, destinationFee, MAX_DESTINATION_FEE));
     }
 
@@ -524,16 +535,11 @@ contract Gateway is IOGateway, IInitializable, IUpgradable {
     }
 
     // @dev Get token address by tokenID
-    function tokenAddressOf(
-        bytes32 tokenID
-    ) external view returns (address) {
+    function tokenAddressOf(bytes32 tokenID) external view returns (address) {
         return Assets.tokenAddressOf(tokenID);
     }
 
-    function sendOperatorsData(
-        bytes32[] calldata data,
-        uint48 epoch
-    ) external onlyMiddleware {
+    function sendOperatorsData(bytes32[] calldata data, uint48 epoch) external onlyMiddleware {
         Ticket memory ticket = Operators.encodeOperatorsData(data, epoch);
         _submitOutboundToChannel(PRIMARY_GOVERNANCE_CHANNEL_ID, ticket.payload);
     }
@@ -558,19 +564,21 @@ contract Gateway is IOGateway, IInitializable, IUpgradable {
     }
 
     // Verify that a message commitment is considered finalized by our BEEFY light client.
-    function _verifyCommitment(
-        bytes32 commitment,
-        Verification.Proof calldata proof
-    ) internal view virtual returns (bool) {
+    function _verifyCommitment(bytes32 commitment, Verification.Proof calldata proof)
+        internal
+        view
+        virtual
+        returns (bool)
+    {
         return Verification.verifyCommitment(BEEFY_CLIENT, BRIDGE_HUB_PARA_ID_ENCODED, commitment, proof);
     }
 
     // Convert foreign currency to native currency (ROC/KSM/DOT -> ETH)
-    function _convertToNative(
-        UD60x18 exchangeRate,
-        UD60x18 multiplier,
-        UD60x18 amount
-    ) internal view returns (uint256) {
+    function _convertToNative(UD60x18 exchangeRate, UD60x18 multiplier, UD60x18 amount)
+        internal
+        view
+        returns (uint256)
+    {
         UD60x18 ethDecimals = convert(1e18);
         UD60x18 foreignDecimals = convert(10).pow(convert(uint256(FOREIGN_TOKEN_DECIMALS)));
         UD60x18 nativeAmount = multiplier.mul(amount).mul(exchangeRate).div(foreignDecimals).mul(ethDecimals);
@@ -578,18 +586,14 @@ contract Gateway is IOGateway, IInitializable, IUpgradable {
     }
 
     // Calculate the fee for accepting an outbound message
-    function _calculateFee(
-        Costs memory costs
-    ) internal view returns (uint256) {
+    function _calculateFee(Costs memory costs) internal view returns (uint256) {
         PricingStorage.Layout storage pricing = PricingStorage.layout();
         UD60x18 amount = convert(pricing.deliveryCost + costs.foreign);
         return costs.native + _convertToNative(pricing.exchangeRate, pricing.multiplier, amount);
     }
 
     // Submit an outbound message to Polkadot, after taking fees
-    function _submitOutbound(
-        Ticket memory ticket
-    ) internal {
+    function _submitOutbound(Ticket memory ticket) internal {
         ChannelID channelID = ticket.dest.into();
         Channel storage channel = _ensureChannel(channelID);
 
@@ -639,9 +643,7 @@ contract Gateway is IOGateway, IInitializable, IUpgradable {
     }
 
     /// @dev Outbound message can be disabled globally or on a per-channel basis.
-    function _ensureOutboundMessagingEnabled(
-        Channel storage ch
-    ) internal view {
+    function _ensureOutboundMessagingEnabled(Channel storage ch) internal view {
         CoreStorage.Layout storage $ = CoreStorage.layout();
         if ($.mode != OperatingMode.Normal || ch.mode != OperatingMode.Normal) {
             revert Disabled();
@@ -649,9 +651,7 @@ contract Gateway is IOGateway, IInitializable, IUpgradable {
     }
 
     /// @dev Ensure that the specified parachain has a channel allocated
-    function _ensureChannel(
-        ChannelID channelID
-    ) internal view returns (Channel storage ch) {
+    function _ensureChannel(ChannelID channelID) internal view returns (Channel storage ch) {
         ch = CoreStorage.layout().channels[channelID];
         // A channel always has an agent specified.
         if (ch.agent == address(0)) {
@@ -660,9 +660,7 @@ contract Gateway is IOGateway, IInitializable, IUpgradable {
     }
 
     /// @dev Ensure that the specified agentID has a corresponding contract
-    function _ensureAgent(
-        bytes32 agentID
-    ) internal view returns (address agent) {
+    function _ensureAgent(bytes32 agentID) internal view returns (address agent) {
         agent = CoreStorage.layout().agents[agentID];
         if (agent == address(0)) {
             revert AgentDoesNotExist();
@@ -736,9 +734,7 @@ contract Gateway is IOGateway, IInitializable, IUpgradable {
     /// }
     /// ```
     ///
-    function initialize(
-        bytes calldata data
-    ) external virtual {
+    function initialize(bytes calldata data) external virtual {
         // Ensure that arbitrary users cannot initialize storage in this logic contract.
         if (ERC1967.load() == address(0)) {
             revert Unauthorized();
@@ -794,9 +790,7 @@ contract Gateway is IOGateway, IInitializable, IUpgradable {
         operatorStorage.operator = config.rescueOperator;
     }
 
-    function _transferOwnership(
-        address newOwner
-    ) internal {
+    function _transferOwnership(address newOwner) internal {
         GatewayCoreStorage.Layout storage layout = GatewayCoreStorage.layout();
 
         address oldOwner = layout.owner;
@@ -805,32 +799,28 @@ contract Gateway is IOGateway, IInitializable, IUpgradable {
         emit OwnershipTransferred(oldOwner, newOwner);
     }
 
-    function transferOwnership(
-        address newOwner
-    ) external onlyOwner {
+    function transferOwnership(address newOwner) external onlyOwner {
         _transferOwnership(newOwner);
     }
 
     /// Changes the middleware address.
-    function setMiddleware(
-        address middleware
-    ) external onlyOwner {
+    function setMiddleware(address middleware) external onlyOwner {
         GatewayCoreStorage.Layout storage layout = GatewayCoreStorage.layout();
         address oldMiddleware = layout.middleware;
 
-        if(middleware == address(0)) {
+        if (middleware == address(0)) {
             revert CantSetMiddlewareToZeroAddress();
         }
 
-        if(middleware == oldMiddleware) {
+        if (middleware == oldMiddleware) {
             revert CantSetMiddlewareToSameAddress();
         }
-        
+
         layout.middleware = middleware;
         emit MiddlewareChanged(oldMiddleware, middleware);
     }
 
-    function s_middleware() external view returns(address) {
+    function s_middleware() external view returns (address) {
         GatewayCoreStorage.Layout storage layout = GatewayCoreStorage.layout();
         return layout.middleware;
     }

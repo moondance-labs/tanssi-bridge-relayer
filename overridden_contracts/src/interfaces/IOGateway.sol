@@ -12,7 +12,7 @@
 // GNU General Public License for more details.
 // You should have received a copy of the GNU General Public License
 // along with Tanssi.  If not, see <http://www.gnu.org/licenses/>
-pragma solidity 0.8.25;
+pragma solidity ^0.8.0;
 
 import {ParaID} from "../Types.sol";
 import {IGateway} from "./IGateway.sol";
@@ -27,14 +27,40 @@ interface IOGateway is IGateway {
     // Emitted when the middleware contract address is changed by the owner.
     event MiddlewareChanged(address indexed previousMiddleware, address indexed newMiddleware);
 
-    function s_middleware() external view returns(address);
+    // Emitted when the middleware fails to apply an individual slash
+    event UnableToProcessIndividualSlashB(
+        bytes32 indexed operatorKey, uint256 slashFranction, uint256 indexed timestamp, bytes error
+    );
 
-    function sendOperatorsData(
-        bytes32[] calldata data,
-        uint48 epoch
-    ) external;
+    // Emitted when the middleware fails to apply an individual slash
+    event UnableToProcessIndividualSlashS(
+        bytes32 indexed operatorKey, uint256 slashFranction, uint256 indexed timestamp, string error
+    );
 
-    function setMiddleware(
-        address middleware
-    ) external;
+    // Emitted when the middleware fails to apply the slash message
+    event UnableToProcessSlashMessageB(bytes error);
+
+    // Emitted when the middleware fails to apply the slash message
+    event UnableToProcessSlashMessageS(string error);
+
+    // Slash struct, used to decode slashes, which are identified by
+    // operatorKey to be slashed
+    // slashFraction to be applied as parts per billion
+    // timestamp identifying when the slash happened
+    struct Slash {
+        bytes32 operatorKey;
+        uint256 slashFraction;
+        uint256 timestamp;
+    }
+
+    struct SlashParams {
+        uint256 eraIndex;
+        Slash[] slashes;
+    }
+
+    function s_middleware() external view returns (address);
+
+    function sendOperatorsData(bytes32[] calldata data, uint48 epoch) external;
+
+    function setMiddleware(address middleware) external;
 }

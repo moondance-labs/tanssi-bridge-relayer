@@ -1,17 +1,20 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity 0.8.25;
 
-import {Test} from "forge-std/Test.sol";
+import {Test, Vm} from "forge-std/Test.sol";
 import {Strings} from "openzeppelin/utils/Strings.sol";
 import {console} from "forge-std/console.sol";
 
 import {BeefyClient} from "../src/BeefyClient.sol";
 
 import {IGateway} from "../src/interfaces/IGateway.sol";
+import {IOGateway} from "../src/interfaces/IOGateway.sol";
 import {IInitializable} from "../src/interfaces/IInitializable.sol";
 import {IUpgradable} from "../src/interfaces/IUpgradable.sol";
+import {IMiddlewareBasic} from "../src/interfaces/IMiddlewareBasic.sol";
 import {Gateway} from "../src/Gateway.sol";
 import {MockGateway} from "./mocks/MockGateway.sol";
+
 import {MockGatewayV2} from "./mocks/MockGatewayV2.sol";
 import {GatewayProxy} from "../src/GatewayProxy.sol";
 
@@ -158,6 +161,13 @@ contract GatewayTest is Test {
 
     function makeCreateAgentCommand() public pure returns (Command, bytes memory) {
         return (Command.CreateAgent, abi.encode((keccak256("6666"))));
+    }
+
+    function _makeReportSlashesCommand() public pure returns (Command, bytes memory) {
+        IOGateway.Slash[] memory slashes = new IOGateway.Slash[](1);
+        slashes[0] = IOGateway.Slash({operatorKey: bytes32(uint256(1)), slashFraction: 500_000, timestamp: 1});
+        uint256 eraIndex = 1;
+        return (Command.ReportSlashes, abi.encode(IOGateway.SlashParams({eraIndex: eraIndex, slashes: slashes})));
     }
 
     function makeMockProof() public pure returns (Verification.Proof memory) {
@@ -1006,5 +1016,120 @@ contract GatewayTest is Test {
 
         bytes memory encodedParams = abi.encode(params);
         MockGateway(address(gateway)).agentExecutePublic(encodedParams);
+    }
+
+    // middleware not set, should not be able to process slash
+    function testSubmitSlashesWithoutMiddleware() public {
+        deal(assetHubAgent, 50 ether);
+
+        (Command command, bytes memory params) = _makeReportSlashesCommand();
+
+        vm.expectEmit(true, true, true, true);
+        emit IOGateway.UnableToProcessSlashMessageB(abi.encodeWithSelector(Gateway.MiddlewareNotSet.selector));
+        // Expect the gateway to emit `InboundMessageDispatched`
+        vm.expectEmit(true, true, true, true);
+        emit IGateway.InboundMessageDispatched(assetHubParaID.into(), 1, messageID, false);
+
+        hoax(relayer, 1 ether);
+        IGateway(address(gateway)).submitV1(
+            InboundMessage(assetHubParaID.into(), 1, command, params, maxDispatchGas, maxRefund, reward, messageID),
+            proof,
+            makeMockProof()
+        );
+    }
+
+    // middleware set, but not complying with the interface, should not process slash
+    function testSubmitSlashesWithMiddlewareNotComplyingInterface() public {
+        deal(assetHubAgent, 50 ether);
+
+        (Command command, bytes memory params) = _makeReportSlashesCommand();
+
+        IOGateway(address(gateway)).setMiddleware(0x0123456789012345678901234567890123456789);
+
+        bytes memory empty;
+        // Expect the gateway to emit `InboundMessageDispatched`
+        // For some reason when you are loading an address not complying an interface, you get an empty message
+        // It still serves us to know that this is the reason
+        vm.expectEmit(true, true, true, true);
+        emit IOGateway.UnableToProcessSlashMessageB(empty);
+        vm.expectEmit(true, true, true, true);
+        emit IGateway.InboundMessageDispatched(assetHubParaID.into(), 1, messageID, false);
+
+        hoax(relayer, 1 ether);
+        IGateway(address(gateway)).submitV1(
+            InboundMessage(assetHubParaID.into(), 1, command, params, maxDispatchGas, maxRefund, reward, messageID),
+            proof,
+            makeMockProof()
+        );
+    }
+
+    // middleware set, complying interface but slash reverts
+    function testSubmitSlashesWithMiddlewareComplyingInterfaceAndSlashRevert() public {
+        deal(assetHubAgent, 50 ether);
+
+        (Command command, bytes memory params) = _makeReportSlashesCommand();
+
+        bytes memory expectedError = bytes("no process slash");
+
+        // We mock the call so that it reverts
+        vm.mockCallRevert(address(1), abi.encodeWithSelector(IMiddlewareBasic.slash.selector), "no process slash");
+
+        // We mock the call so that it does not revert, but it will revert in the previous one
+        vm.mockCall(address(1), abi.encodeWithSelector(IMiddlewareBasic.getEpochAtTs.selector), abi.encode(10));
+
+        IOGateway(address(gateway)).setMiddleware(address(1));
+
+        IOGateway.Slash memory expectedSlash =
+            IOGateway.Slash({operatorKey: bytes32(uint256(1)), slashFraction: 500_000, timestamp: 1});
+
+        vm.expectEmit(true, true, true, true);
+        emit IOGateway.UnableToProcessIndividualSlashB(
+            expectedSlash.operatorKey, expectedSlash.slashFraction, expectedSlash.timestamp, expectedError
+        );
+        vm.expectEmit(true, true, true, true);
+        emit IGateway.InboundMessageDispatched(assetHubParaID.into(), 1, messageID, true);
+
+        hoax(relayer, 1 ether);
+        IGateway(address(gateway)).submitV1(
+            InboundMessage(assetHubParaID.into(), 1, command, params, maxDispatchGas, maxRefund, reward, messageID),
+            proof,
+            makeMockProof()
+        );
+    }
+
+    // middleware set, complying interface and slash processed
+    function testSubmitSlashesWithMiddlewareComplyingInterfaceAndSlashProcessed() public {
+        deal(assetHubAgent, 50 ether);
+
+        (Command command, bytes memory params) = _makeReportSlashesCommand();
+
+        // We mock the call so that it does not revert
+        vm.mockCall(address(1), abi.encodeWithSelector(IMiddlewareBasic.slash.selector), abi.encode(10));
+
+        // We mock the call so that it does not revert
+        vm.mockCall(address(1), abi.encodeWithSelector(IMiddlewareBasic.getEpochAtTs.selector), abi.encode(10));
+
+        IOGateway(address(gateway)).setMiddleware(address(1));
+
+        // Since we are asserting all fields, the last one is a true, therefore meaning
+        // that the dispatch went through correctly
+
+        vm.expectEmit(true, true, true, true);
+        emit IGateway.InboundMessageDispatched(assetHubParaID.into(), 1, messageID, true);
+
+        hoax(relayer, 1 ether);
+        vm.recordLogs();
+        IGateway(address(gateway)).submitV1(
+            InboundMessage(assetHubParaID.into(), 1, command, params, maxDispatchGas, maxRefund, reward, messageID),
+            proof,
+            makeMockProof()
+        );
+
+        Vm.Log[] memory entries = vm.getRecordedLogs();
+        // We assert none of the slash error events has been emitted
+        for (uint256 i = 0; i < entries.length; i++) {
+            assertNotEq(entries[i].topics[0], IOGateway.UnableToProcessIndividualSlashB.selector);
+            assertNotEq(entries[i].topics[0], IOGateway.UnableToProcessIndividualSlashS.selector);
+        }
     }
 }

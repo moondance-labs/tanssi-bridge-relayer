@@ -23,58 +23,44 @@ contract MockOGateway is Gateway {
         Gateway(beefyClient, agentExecutor, bridgeHubParaID, bridgeHubHubAgentID, foreignTokenDecimals, maxDestinationFee)
     {}
 
-    function agentExecutePublic(
-        bytes calldata params
-    ) external {
+    function agentExecutePublic(bytes calldata params) external {
         this.agentExecute(params);
     }
 
-    function createAgentPublic(
-        bytes calldata params
-    ) external {
+    function createAgentPublic(bytes calldata params) external {
         this.createAgent(params);
     }
 
-    function upgradePublic(
-        bytes calldata params
-    ) external {
+    function upgradePublic(bytes calldata params) external {
         this.upgrade(params);
     }
 
-    function createChannelPublic(
-        bytes calldata params
-    ) external {
+    function createChannelPublic(bytes calldata params) external {
         this.createChannel(params);
     }
 
-    function updateChannelPublic(
-        bytes calldata params
-    ) external {
+    function updateChannelPublic(bytes calldata params) external {
         this.updateChannel(params);
     }
 
-    function setOperatingModePublic(
-        bytes calldata params
-    ) external {
+    function setOperatingModePublic(bytes calldata params) external {
         this.setOperatingMode(params);
     }
 
-    function transferNativeFromAgentPublic(
-        bytes calldata params
-    ) external {
+    function transferNativeFromAgentPublic(bytes calldata params) external {
         this.transferNativeFromAgent(params);
     }
 
-    function setCommitmentsAreVerified(
-        bool value
-    ) external {
+    function setCommitmentsAreVerified(bool value) external {
         commitmentsAreVerified = value;
     }
 
-    function _verifyCommitment(
-        bytes32 commitment,
-        Verification.Proof calldata proof
-    ) internal view override returns (bool) {
+    function _verifyCommitment(bytes32 commitment, Verification.Proof calldata proof)
+        internal
+        view
+        override
+        returns (bool)
+    {
         if (BEEFY_CLIENT != address(0)) {
             return super._verifyCommitment(commitment, proof);
         } else {
@@ -83,33 +69,23 @@ contract MockOGateway is Gateway {
         }
     }
 
-    function setTokenTransferFeesPublic(
-        bytes calldata params
-    ) external {
+    function setTokenTransferFeesPublic(bytes calldata params) external {
         this.setTokenTransferFees(params);
     }
 
-    function setPricingParametersPublic(
-        bytes calldata params
-    ) external {
+    function setPricingParametersPublic(bytes calldata params) external {
         this.setPricingParameters(params);
     }
 
-    function registerForeignTokenPublic(
-        bytes calldata params
-    ) external {
+    function registerForeignTokenPublic(bytes calldata params) external {
         this.registerForeignToken(params);
     }
 
-    function mintForeignTokenPublic(
-        bytes calldata params
-    ) external {
+    function mintForeignTokenPublic(bytes calldata params) external {
         this.mintForeignToken(params);
     }
 
-    function transferNativeTokenPublic(
-        bytes calldata params
-    ) external {
+    function transferNativeTokenPublic(bytes calldata params) external {
         this.transferNativeToken(params);
     }
 }

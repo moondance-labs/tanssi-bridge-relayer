@@ -1,6 +1,6 @@
 # This workflow will test relayer
 
-name: Relayer
+name: Test
 
 on:
   push:
@@ -51,12 +51,23 @@ jobs:
     - name: Check mage
       run: mage --version
 
+    - name: Run Forge fmt
+      run: |
+        forge fmt overridden_contracts/ --check
+      id: fmt
+
     - name: Build
       run: mage build
 
     - name: Check if go contract bindings are up-to-date
       run: git diff --exit-code ./relays/contracts || (echo "The contract bindings are not up-to-date against contracts." && exit 1)
 
-    - name: Test
+    - name: Test Relayer
       run: mage test
+
+    - name: Run Forge tests
+      run: |
+        cd snowbridge/contracts
+        forge test -vvv
+      id: test
 

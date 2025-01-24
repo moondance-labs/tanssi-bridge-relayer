@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity 0.8.25;
 
-import {Test} from "forge-std/Test.sol";
+import {Test, Vm} from "forge-std/Test.sol";
 import {Strings} from "openzeppelin/utils/Strings.sol";
 import {console} from "forge-std/console.sol";
 
@@ -1085,7 +1085,9 @@ contract GatewayTest is Test {
             IOGateway.Slash({operatorKey: bytes32(uint256(1)), slashFraction: 500_000, timestamp: 1});
 
         vm.expectEmit(true, true, true, true);
-        emit IOGateway.UnableToProcessIndividualSlash(expectedSlash, expectedError);
+        emit IOGateway.UnableToProcessIndividualSlashB(
+            expectedSlash.operatorKey, expectedSlash.slashFraction, expectedSlash.timestamp, expectedError
+        );
         vm.expectEmit(true, true, true, true);
         emit IGateway.InboundMessageDispatched(assetHubParaID.into(), 1, messageID, true);
 
@@ -1113,14 +1115,23 @@ contract GatewayTest is Test {
 
         // Since we are asserting all fields, the last one is a true, therefore meaning
         // that the dispatch went through correctly
+
         vm.expectEmit(true, true, true, true);
         emit IGateway.InboundMessageDispatched(assetHubParaID.into(), 1, messageID, true);
 
         hoax(relayer, 1 ether);
+        vm.recordLogs();
         IGateway(address(gateway)).submitV1(
             InboundMessage(assetHubParaID.into(), 1, command, params, maxDispatchGas, maxRefund, reward, messageID),
             proof,
             makeMockProof()
         );
+
+        Vm.Log[] memory entries = vm.getRecordedLogs();
+        // We assert none of the slash error events has been emitted
+        for (uint256 i = 0; i < entries.length; i++) {
+            assertNotEq(entries[i].topics[0], IOGateway.UnableToProcessIndividualSlashB.selector);
+            assertNotEq(entries[i].topics[0], IOGateway.UnableToProcessIndividualSlashS.selector);
+        }
     }
 }

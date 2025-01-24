@@ -14,8 +14,6 @@ import {IUpgradable} from "../src/interfaces/IUpgradable.sol";
 import {IMiddlewareBasic} from "../src/interfaces/IMiddlewareBasic.sol";
 import {Gateway} from "../src/Gateway.sol";
 import {MockGateway} from "./mocks/MockGateway.sol";
-import {MockOMiddlewareReverter} from "./mocks/MockOMiddlewareReverter.sol";
-import {MockOMiddlewareProcessor} from "./mocks/MockOMiddlewareProcessor.sol";
 
 import {MockGatewayV2} from "./mocks/MockGatewayV2.sol";
 import {GatewayProxy} from "../src/GatewayProxy.sol";

@@ -261,10 +261,10 @@ contract Gateway is IOGateway, IInitializable, IUpgradable {
             // We need to put all this inside a generic try-catch, since we dont want to revert decoding nor anything
             try Gateway(this).reportSlashes{gas: maxDispatchGas}(message.params) {}
             catch Error(string memory err) {
-                emit UnableToProcessSlashMessage(err);
+                emit UnableToProcessSlashMessageS(err);
                 success = false;
             } catch (bytes memory err) {
-                emit UnableToProcessSlashMessage(err);
+                emit UnableToProcessSlashMessageB(err);
                 success = false;
             }
         }

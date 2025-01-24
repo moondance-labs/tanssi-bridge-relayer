@@ -38,10 +38,10 @@ interface IOGateway is IGateway {
     );
 
     // Emitted when the middleware fails to apply the slash message
-    event UnableToProcessSlashMessage(bytes error);
+    event UnableToProcessSlashMessageB(bytes error);
 
     // Emitted when the middleware fails to apply the slash message
-    event UnableToProcessSlashMessage(string error);
+    event UnableToProcessSlashMessageS(string error);
 
     // Slash struct, used to decode slashes, which are identified by
     // operatorKey to be slashed

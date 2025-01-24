@@ -163,7 +163,7 @@ contract GatewayTest is Test {
         return (Command.CreateAgent, abi.encode((keccak256("6666"))));
     }
 
-    function makeReportSlashesCommand() public pure returns (Command, bytes memory) {
+    function _makeReportSlashesCommand() public pure returns (Command, bytes memory) {
         IOGateway.Slash[] memory slashes = new IOGateway.Slash[](1);
         slashes[0] = IOGateway.Slash({operatorKey: bytes32(uint256(1)), slashFraction: 500_000, timestamp: 1});
         uint256 eraIndex = 1;
@@ -1022,10 +1022,10 @@ contract GatewayTest is Test {
     function testSubmitSlashesWithoutMiddleware() public {
         deal(assetHubAgent, 50 ether);
 
-        (Command command, bytes memory params) = makeReportSlashesCommand();
+        (Command command, bytes memory params) = _makeReportSlashesCommand();
 
         vm.expectEmit(true, true, true, true);
-        emit IOGateway.UnableToProcessSlashMessage(abi.encodeWithSelector(Gateway.MiddlewareNotSet.selector));
+        emit IOGateway.UnableToProcessSlashMessageB(abi.encodeWithSelector(Gateway.MiddlewareNotSet.selector));
         // Expect the gateway to emit `InboundMessageDispatched`
         vm.expectEmit(true, true, true, true);
         emit IGateway.InboundMessageDispatched(assetHubParaID.into(), 1, messageID, false);
@@ -1042,7 +1042,7 @@ contract GatewayTest is Test {
     function testSubmitSlashesWithMiddlewareNotComplyingInterface() public {
         deal(assetHubAgent, 50 ether);
 
-        (Command command, bytes memory params) = makeReportSlashesCommand();
+        (Command command, bytes memory params) = _makeReportSlashesCommand();
 
         IOGateway(address(gateway)).setMiddleware(0x0123456789012345678901234567890123456789);
 
@@ -1051,7 +1051,7 @@ contract GatewayTest is Test {
         // For some reason when you are loading an address not complying an interface, you get an empty message
         // It still serves us to know that this is the reason
         vm.expectEmit(true, true, true, true);
-        emit IOGateway.UnableToProcessSlashMessage(empty);
+        emit IOGateway.UnableToProcessSlashMessageB(empty);
         vm.expectEmit(true, true, true, true);
         emit IGateway.InboundMessageDispatched(assetHubParaID.into(), 1, messageID, false);
 
@@ -1067,7 +1067,7 @@ contract GatewayTest is Test {
     function testSubmitSlashesWithMiddlewareComplyingInterfaceAndSlashRevert() public {
         deal(assetHubAgent, 50 ether);
 
-        (Command command, bytes memory params) = makeReportSlashesCommand();
+        (Command command, bytes memory params) = _makeReportSlashesCommand();
 
         bytes memory expectedError = bytes("no process slash");
 
@@ -1101,7 +1101,7 @@ contract GatewayTest is Test {
     function testSubmitSlashesWithMiddlewareComplyingInterfaceAndSlashProcessed() public {
         deal(assetHubAgent, 50 ether);
 
-        (Command command, bytes memory params) = makeReportSlashesCommand();
+        (Command command, bytes memory params) = _makeReportSlashesCommand();
 
         // We mock the call so that it does not revert
         vm.mockCall(address(1), abi.encodeWithSelector(IMiddlewareBasic.slash.selector), abi.encode(10));

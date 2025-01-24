@@ -1029,8 +1029,8 @@ contract GatewayTest is Test {
         vm.expectEmit(true, true, true, true);
         emit IOGateway.UnableToProcessSlashMessage(abi.encodeWithSelector(Gateway.MiddlewareNotSet.selector));
         // Expect the gateway to emit `InboundMessageDispatched`
-        vm.expectEmit(true, false, false, false);
-        emit IGateway.InboundMessageDispatched(assetHubParaID.into(), 1, messageID, true);
+        vm.expectEmit(true, true, true, true);
+        emit IGateway.InboundMessageDispatched(assetHubParaID.into(), 1, messageID, false);
 
         hoax(relayer, 1 ether);
         IGateway(address(gateway)).submitV1(
@@ -1054,8 +1054,8 @@ contract GatewayTest is Test {
         // It still serves us to know that this is the reason
         vm.expectEmit(true, true, true, true);
         emit IOGateway.UnableToProcessSlashMessage(empty);
-        vm.expectEmit(true, false, false, false);
-        emit IGateway.InboundMessageDispatched(assetHubParaID.into(), 1, messageID, true);
+        vm.expectEmit(true, true, true, true);
+        emit IGateway.InboundMessageDispatched(assetHubParaID.into(), 1, messageID, false);
 
         hoax(relayer, 1 ether);
         IGateway(address(gateway)).submitV1(
@@ -1071,17 +1071,22 @@ contract GatewayTest is Test {
 
         (Command command, bytes memory params) = makeReportSlashesCommand();
 
-        IMiddlewareBasic middleware = new MockOMiddlewareReverter();
+        bytes memory expectedError = bytes("no process slash");
 
-        IOGateway(address(gateway)).setMiddleware(address(middleware));
+        // We mock the call so that it reverts
+        vm.mockCallRevert(address(1), abi.encodeWithSelector(IMiddlewareBasic.slash.selector), "no process slash");
+
+        // We mock the call so that it does not revert, but it will revert in the previous one
+        vm.mockCall(address(1), abi.encodeWithSelector(IMiddlewareBasic.getEpochAtTs.selector), abi.encode(10));
+
+        IOGateway(address(gateway)).setMiddleware(address(1));
 
         IOGateway.Slash memory expectedSlash =
             IOGateway.Slash({operatorKey: bytes32(uint256(1)), slashFraction: 500_000, timestamp: 1});
 
-        string memory expectedError = "no process slash";
         vm.expectEmit(true, true, true, true);
         emit IOGateway.UnableToProcessIndividualSlash(expectedSlash, expectedError);
-        vm.expectEmit(true, false, false, false);
+        vm.expectEmit(true, true, true, true);
         emit IGateway.InboundMessageDispatched(assetHubParaID.into(), 1, messageID, true);
 
         hoax(relayer, 1 ether);
@@ -1098,13 +1103,17 @@ contract GatewayTest is Test {
 
         (Command command, bytes memory params) = makeReportSlashesCommand();
 
-        IMiddlewareBasic middleware = new MockOMiddlewareProcessor();
+        // We mock the call so that it does not revert
+        vm.mockCall(address(1), abi.encodeWithSelector(IMiddlewareBasic.slash.selector), abi.encode(10));
 
-        IOGateway(address(gateway)).setMiddleware(address(middleware));
+        // We mock the call so that it does not revert
+        vm.mockCall(address(1), abi.encodeWithSelector(IMiddlewareBasic.getEpochAtTs.selector), abi.encode(10));
 
+        IOGateway(address(gateway)).setMiddleware(address(1));
+
+        // Since we are asserting all fields, the last one is a true, therefore meaning
+        // that the dispatch went through correctly
         vm.expectEmit(true, true, true, true);
-        emit MockOMiddlewareProcessor.SlashProcessed();
-        vm.expectEmit(true, false, false, false);
         emit IGateway.InboundMessageDispatched(assetHubParaID.into(), 1, messageID, true);
 
         hoax(relayer, 1 ether);

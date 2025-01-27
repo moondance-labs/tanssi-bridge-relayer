@@ -28,12 +28,16 @@ import {
 import {IGateway} from "../../src/interfaces/IGateway.sol";
 import {IMiddlewareBasic} from "../../src/interfaces/IMiddlewareBasic.sol";
 import {MockGateway} from "../mocks/MockGateway.sol";
-import {CreateAgentParams, CreateChannelParams} from "../../src/Params.sol";
+import {
+    CreateAgentParams,
+    CreateChannelParams,
+    SetOperatingModeParams,
+    RegisterForeignTokenParams
+} from "../../src/Params.sol";
 import {OperatingMode, ParaID, Command} from "../../src/Types.sol";
 import {GatewayProxy} from "../../src/GatewayProxy.sol";
 import {MultiAddress} from "../../src/MultiAddress.sol";
 import {AgentExecutor} from "../../src/AgentExecutor.sol";
-import {SetOperatingModeParams} from "../../src/Params.sol";
 import {Verification} from "../../src/Verification.sol";
 
 import {Strings} from "openzeppelin/utils/Strings.sol";
@@ -41,6 +45,7 @@ import {Strings} from "openzeppelin/utils/Strings.sol";
 import {Gateway} from "../../src/Gateway.sol";
 import {IOGateway} from "../../src/interfaces/IOGateway.sol";
 import {Operators} from "../../src/Operators.sol";
+import {Assets} from "../../src/Assets.sol";
 import {MockOGateway} from "../mocks/MockOGateway.sol";
 
 //NEW
@@ -170,14 +175,29 @@ contract GatewayTest is Test {
         return (Command.ReportSlashes, abi.encode(IOGateway.SlashParams({eraIndex: eraIndex, slashes: slashes})));
     }
 
-    function _makeReportRewardsCommand() public pure returns (Command, bytes memory) {
+    function _makeReportRewardsCommand() public returns (Command, bytes memory, address) {
         uint256 epoch = 0;
         uint256 eraIndex = 1;
         uint256 totalPointsToken = 1 ether;
         uint256 tokensInflatedToken = 1 ether;
         bytes32 rewardsRoot = bytes32(uint256(1));
+        bytes32 foreignTokenId = bytes32(uint256(1));
 
-        return (Command.ReportRewards, abi.encode(epoch, eraIndex, totalPointsToken, tokensInflatedToken, rewardsRoot));
+        RegisterForeignTokenParams memory params =
+            RegisterForeignTokenParams({foreignTokenID: dotTokenID, name: "Test", symbol: "TST", decimals: 10});
+
+        vm.expectEmit(true, true, false, false);
+        emit IGateway.ForeignTokenRegistered(foreignTokenId, address(0));
+
+        MockGateway(address(gateway)).registerForeignTokenPublic(abi.encode(params));
+
+        address tokenAddress = Assets.tokenAddressOf(foreignTokenId);
+
+        return (
+            Command.ReportRewards,
+            abi.encode(epoch, eraIndex, totalPointsToken, tokensInflatedToken, rewardsRoot, foreignTokenId),
+            tokenAddress
+        );
     }
 
     function makeMockProof() public pure returns (Verification.Proof memory) {
@@ -443,10 +463,10 @@ contract GatewayTest is Test {
         }
     }
 
-    function testSubmitRewards() public {
+    function testSubmitRewardsx() public {
         deal(assetHubAgent, 50 ether);
 
-        (Command command, bytes memory params) = _makeReportRewardsCommand();
+        (Command command, bytes memory params, address tokenAddress) = _makeReportRewardsCommand();
 
         // We mock the call so that it does not revert
         vm.mockCall(address(1), abi.encodeWithSelector(IMiddlewareBasic.distributeRewards.selector), abi.encode(true));
@@ -468,7 +488,7 @@ contract GatewayTest is Test {
     function testSubmitRewardsWithoutMiddleware() public {
         deal(assetHubAgent, 50 ether);
 
-        (Command command, bytes memory params) = _makeReportRewardsCommand();
+        (Command command, bytes memory params, address tokenAddress) = _makeReportRewardsCommand();
 
         vm.expectEmit(true, true, true, true);
         emit IOGateway.UnableToProcessRewardsMessageB(abi.encodeWithSelector(Gateway.MiddlewareNotSet.selector));
@@ -488,7 +508,7 @@ contract GatewayTest is Test {
     function testSubmitRewardsWithMiddlewareNotComplyingInterface() public {
         deal(assetHubAgent, 50 ether);
 
-        (Command command, bytes memory params) = _makeReportRewardsCommand();
+        (Command command, bytes memory params, address tokenAddress) = _makeReportRewardsCommand();
 
         IOGateway(address(gateway)).setMiddleware(0x0123456789012345678901234567890123456789);
 
@@ -513,7 +533,7 @@ contract GatewayTest is Test {
     function testSubmitRewardsWithMiddlewareComplyingInterfaceAndRewardsRevert() public {
         deal(assetHubAgent, 50 ether);
 
-        (Command command, bytes memory params) = _makeReportRewardsCommand();
+        (Command command, bytes memory params, address tokenAddress) = _makeReportRewardsCommand();
 
         bytes memory expectedError = bytes("can't process rewards"); //This should actually come from IODefaultOperatorRewards
 
@@ -554,7 +574,7 @@ contract GatewayTest is Test {
     function testSubmitRewardsWithMiddlewareComplyingInterfaceAndRewardsProcessed() public {
         deal(assetHubAgent, 50 ether);
 
-        (Command command, bytes memory params) = _makeReportRewardsCommand();
+        (Command command, bytes memory params, address tokenAddress) = _makeReportRewardsCommand();
 
         // We mock the call so that it does not revert
         vm.mockCall(address(1), abi.encodeWithSelector(IMiddlewareBasic.distributeRewards.selector), abi.encode(true));

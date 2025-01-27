@@ -103,9 +103,12 @@ contract GatewayTest is Test {
     // tokenID for DOT
     bytes32 public dotTokenID;
 
+    uint256 public constant SLASH_FRACTION = 500_000;
+
     ChannelID internal constant PRIMARY_GOVERNANCE_CHANNEL_ID = ChannelID.wrap(bytes32(uint256(1)));
     ChannelID internal constant SECONDARY_GOVERNANCE_CHANNEL_ID = ChannelID.wrap(bytes32(uint256(2)));
 
+    // It's generated using VALIDATORS_DATA using scaleCodec. See OSubstrateTypes.EncodedOperatorsData in OSubstrateTypes.sol
     bytes private constant FINAL_VALIDATORS_PAYLOAD =
         hex"7015003800000cd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d90b5ab205c6974c9ea841be688864633dc9ca8a357843eeacf2314649965fe228eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a480100000000000000";
 
@@ -168,9 +171,9 @@ contract GatewayTest is Test {
         dotTokenID = bytes32(uint256(1));
     }
 
-    function _makeReportSlashesCommand() public pure returns (Command, bytes memory) {
+    function _makeReportSlashesCommand(uint256 slashFraction) public pure returns (Command, bytes memory) {
         IOGateway.Slash[] memory slashes = new IOGateway.Slash[](1);
-        slashes[0] = IOGateway.Slash({operatorKey: bytes32(uint256(1)), slashFraction: 500_000, timestamp: 1});
+        slashes[0] = IOGateway.Slash({operatorKey: bytes32(uint256(1)), slashFraction: slashFraction, timestamp: 1});
         uint256 eraIndex = 1;
         return (Command.ReportSlashes, abi.encode(IOGateway.SlashParams({eraIndex: eraIndex, slashes: slashes})));
     }
@@ -239,7 +242,7 @@ contract GatewayTest is Test {
         return paraID;
     }
 
-    function testSendOperatorsDataX() public {
+    function testSendOperatorsData() public {
         // FINAL_VALIDATORS_PAYLOAD has been encoded with epoch 1.
         uint48 epoch = 1;
 
@@ -352,7 +355,7 @@ contract GatewayTest is Test {
     function testSubmitSlashesWithoutMiddleware() public {
         deal(assetHubAgent, 50 ether);
 
-        (Command command, bytes memory params) = _makeReportSlashesCommand();
+        (Command command, bytes memory params) = _makeReportSlashesCommand(SLASH_FRACTION);
 
         vm.expectEmit(true, true, true, true);
         emit IOGateway.UnableToProcessSlashMessageB(abi.encodeWithSelector(Gateway.MiddlewareNotSet.selector));
@@ -372,7 +375,7 @@ contract GatewayTest is Test {
     function testSubmitSlashesWithMiddlewareNotComplyingInterface() public {
         deal(assetHubAgent, 50 ether);
 
-        (Command command, bytes memory params) = _makeReportSlashesCommand();
+        (Command command, bytes memory params) = _makeReportSlashesCommand(SLASH_FRACTION);
 
         IOGateway(address(gateway)).setMiddleware(0x0123456789012345678901234567890123456789);
 
@@ -397,7 +400,7 @@ contract GatewayTest is Test {
     function testSubmitSlashesWithMiddlewareComplyingInterfaceAndSlashRevert() public {
         deal(assetHubAgent, 50 ether);
 
-        (Command command, bytes memory params) = _makeReportSlashesCommand();
+        (Command command, bytes memory params) = _makeReportSlashesCommand(SLASH_FRACTION);
 
         bytes memory expectedError = bytes("no process slash");
 
@@ -410,7 +413,7 @@ contract GatewayTest is Test {
         IOGateway(address(gateway)).setMiddleware(address(1));
 
         IOGateway.Slash memory expectedSlash =
-            IOGateway.Slash({operatorKey: bytes32(uint256(1)), slashFraction: 500_000, timestamp: 1});
+            IOGateway.Slash({operatorKey: bytes32(uint256(1)), slashFraction: SLASH_FRACTION, timestamp: 1});
 
         vm.expectEmit(true, true, true, true);
         emit IOGateway.UnableToProcessIndividualSlashB(
@@ -431,7 +434,7 @@ contract GatewayTest is Test {
     function testSubmitSlashesWithMiddlewareComplyingInterfaceAndSlashProcessed() public {
         deal(assetHubAgent, 50 ether);
 
-        (Command command, bytes memory params) = _makeReportSlashesCommand();
+        (Command command, bytes memory params) = _makeReportSlashesCommand(SLASH_FRACTION);
 
         // We mock the call so that it does not revert
         vm.mockCall(address(1), abi.encodeWithSelector(IMiddlewareBasic.slash.selector), abi.encode(10));

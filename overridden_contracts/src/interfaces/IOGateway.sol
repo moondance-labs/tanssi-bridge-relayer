@@ -43,6 +43,34 @@ interface IOGateway is IGateway {
     // Emitted when the middleware fails to apply the slash message
     event UnableToProcessSlashMessageS(string error);
 
+    // Emitted when the middleware fails to process rewards
+    event UnableToProcessRewardsB(
+        uint256 indexed epoch,
+        uint256 indexed eraIndex,
+        address indexed tokenAddress,
+        uint256 totalPointsToken,
+        uint256 totalTokensInflated,
+        bytes32 rewardsRoot,
+        bytes error
+    );
+
+    // Emitted when the middleware fails to process rewards
+    event UnableToProcessRewardsS(
+        uint256 indexed epoch,
+        uint256 indexed eraIndex,
+        address indexed tokenAddress,
+        uint256 totalPointsToken,
+        uint256 totalTokensInflated,
+        bytes32 rewardsRoot,
+        string error
+    );
+
+    // Emitted when the middleware fails to apply the slash message
+    event UnableToProcessRewardsMessageB(bytes error);
+
+    // Emitted when the middleware fails to apply the slash message
+    event UnableToProcessRewardsMessageS(string error);
+
     // Slash struct, used to decode slashes, which are identified by
     // operatorKey to be slashed
     // slashFraction to be applied as parts per billion
@@ -59,6 +87,10 @@ interface IOGateway is IGateway {
     }
 
     function s_middleware() external view returns (address);
+
+    function reportSlashes(bytes calldata data) external;
+
+    function sendRewards(bytes calldata data) external;
 
     function sendOperatorsData(bytes32[] calldata data, uint48 epoch) external;
 

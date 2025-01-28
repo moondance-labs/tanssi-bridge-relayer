@@ -267,6 +267,15 @@ contract Gateway is IOGateway, IInitializable, IUpgradable {
                 emit UnableToProcessSlashMessageB(err);
                 success = false;
             }
+        } else if (message.command == Command.ReportRewards) {
+            try Gateway(this).sendRewards{gas: maxDispatchGas}(message.params) {}
+            catch Error(string memory err) {
+                emit UnableToProcessRewardsMessageS(err);
+                success = false;
+            } catch (bytes memory err) {
+                emit UnableToProcessRewardsMessageB(err);
+                success = false;
+            }
         }
 
         // Calculate a gas refund, capped to protect against huge spikes in `tx.gasprice`
@@ -489,6 +498,40 @@ contract Gateway is IOGateway, IInitializable, IUpgradable {
                 );
                 continue;
             }
+        }
+    }
+
+    function sendRewards(bytes calldata data) external onlySelf {
+        GatewayCoreStorage.Layout storage layout = GatewayCoreStorage.layout();
+        address middlewareAddress = layout.middleware;
+        // Dont process message if we dont have a middleware set
+        if (middlewareAddress == address(0)) {
+            revert MiddlewareNotSet();
+        }
+
+        // Probably need to send me the token to be minted?
+        (
+            uint256 epoch,
+            uint256 eraIndex,
+            uint256 totalPointsToken,
+            uint256 totalTokensInflated,
+            bytes32 rewardsRoot,
+            bytes32 foreignTokenId
+        ) = abi.decode(data, (uint256, uint256, uint256, uint256, bytes32, bytes32));
+
+        Assets.mintForeignToken(foreignTokenId, middlewareAddress, totalTokensInflated);
+
+        address tokenAddress = Assets.tokenAddressOf(foreignTokenId);
+        try IMiddlewareBasic(middlewareAddress).distributeRewards(
+            epoch, eraIndex, totalPointsToken, totalTokensInflated, rewardsRoot, tokenAddress
+        ) {} catch Error(string memory err) {
+            emit UnableToProcessRewardsS(
+                epoch, eraIndex, tokenAddress, totalPointsToken, totalTokensInflated, rewardsRoot, err
+            );
+        } catch (bytes memory err) {
+            emit UnableToProcessRewardsB(
+                epoch, eraIndex, tokenAddress, totalPointsToken, totalTokensInflated, rewardsRoot, err
+            );
         }
     }
 

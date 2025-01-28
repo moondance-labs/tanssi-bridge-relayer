@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 pragma solidity 0.8.25;
 
+import {console2} from "forge-std/console2.sol";
 import {MerkleProof} from "openzeppelin/utils/cryptography/MerkleProof.sol";
 import {Ownable} from "openzeppelin/access/Ownable.sol";
 import {Verification} from "./Verification.sol";
@@ -107,6 +108,24 @@ contract Gateway is IOGateway, IInitializable, IUpgradable {
     error CantSetMiddlewareToZeroAddress();
     error CantSetMiddlewareToSameAddress();
     error MiddlewareNotSet();
+    error EUnableToProcessRewardsB(
+        uint256 epoch,
+        uint256 eraIndex,
+        address tokenAddress,
+        uint256 totalPointsToken,
+        uint256 totalTokensInflated,
+        bytes32 rewardsRoot,
+        bytes errorBytes
+    );
+    error EUnableToProcessRewardsS(
+        uint256 epoch,
+        uint256 eraIndex,
+        address tokenAddress,
+        uint256 totalPointsToken,
+        uint256 totalTokensInflated,
+        bytes32 rewardsRoot,
+        string errorString
+    );
 
     // Message handlers can only be dispatched by the gateway itself
     modifier onlySelf() {
@@ -509,7 +528,6 @@ contract Gateway is IOGateway, IInitializable, IUpgradable {
             revert MiddlewareNotSet();
         }
 
-        // Probably need to send me the token to be minted?
         (
             uint256 epoch,
             uint256 eraIndex,
@@ -525,11 +543,11 @@ contract Gateway is IOGateway, IInitializable, IUpgradable {
         try IMiddlewareBasic(middlewareAddress).distributeRewards(
             epoch, eraIndex, totalPointsToken, totalTokensInflated, rewardsRoot, tokenAddress
         ) {} catch Error(string memory err) {
-            emit UnableToProcessRewardsS(
+            revert EUnableToProcessRewardsS(
                 epoch, eraIndex, tokenAddress, totalPointsToken, totalTokensInflated, rewardsRoot, err
             );
         } catch (bytes memory err) {
-            emit UnableToProcessRewardsB(
+            revert EUnableToProcessRewardsB(
                 epoch, eraIndex, tokenAddress, totalPointsToken, totalTokensInflated, rewardsRoot, err
             );
         }

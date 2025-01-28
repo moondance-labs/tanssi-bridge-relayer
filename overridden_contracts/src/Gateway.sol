@@ -519,16 +519,19 @@ contract Gateway is IOGateway, IInitializable, IUpgradable {
             bytes32 foreignTokenId
         ) = abi.decode(data, (uint256, uint256, uint256, uint256, bytes32, bytes32));
 
-        // ! We need a foreignTokenID to mint the token. I don't want to save it in the Assets storage otherwise it's another change to be made. Can we send directly the address of the token everytime?
         Assets.mintForeignToken(foreignTokenId, middlewareAddress, totalTokensInflated);
 
         address tokenAddress = Assets.tokenAddressOf(foreignTokenId);
         try IMiddlewareBasic(middlewareAddress).distributeRewards(
             epoch, eraIndex, totalPointsToken, totalTokensInflated, rewardsRoot, tokenAddress
         ) {} catch Error(string memory err) {
-            emit UnableToProcessRewardsS(epoch, eraIndex, totalPointsToken, totalTokensInflated, rewardsRoot, err);
+            emit UnableToProcessRewardsS(
+                epoch, eraIndex, tokenAddress, totalPointsToken, totalTokensInflated, rewardsRoot, err
+            );
         } catch (bytes memory err) {
-            emit UnableToProcessRewardsB(epoch, eraIndex, totalPointsToken, totalTokensInflated, rewardsRoot, err);
+            emit UnableToProcessRewardsB(
+                epoch, eraIndex, tokenAddress, totalPointsToken, totalTokensInflated, rewardsRoot, err
+            );
         }
     }
 

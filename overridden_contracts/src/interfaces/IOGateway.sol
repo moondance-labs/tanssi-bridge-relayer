@@ -47,6 +47,7 @@ interface IOGateway is IGateway {
     event UnableToProcessRewardsB(
         uint256 indexed epoch,
         uint256 indexed eraIndex,
+        address indexed tokenAddress,
         uint256 totalPointsToken,
         uint256 totalTokensInflated,
         bytes32 rewardsRoot,
@@ -57,6 +58,7 @@ interface IOGateway is IGateway {
     event UnableToProcessRewardsS(
         uint256 indexed epoch,
         uint256 indexed eraIndex,
+        address indexed tokenAddress,
         uint256 totalPointsToken,
         uint256 totalTokensInflated,
         bytes32 rewardsRoot,

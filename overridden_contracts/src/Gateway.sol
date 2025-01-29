@@ -528,6 +528,7 @@ contract Gateway is IOGateway, IInitializable, IUpgradable {
             revert MiddlewareNotSet();
         }
 
+        //TODO revert back to epoch when we have it
         (
             uint256 timestamp,
             uint256 eraIndex,
@@ -540,6 +541,7 @@ contract Gateway is IOGateway, IInitializable, IUpgradable {
         Assets.mintForeignToken(foreignTokenId, middlewareAddress, totalTokensInflated);
 
         address tokenAddress = Assets.tokenAddressOf(foreignTokenId);
+
         uint48 epoch = IMiddlewareBasic(middlewareAddress).getEpochAtTs(uint48(timestamp));
         try IMiddlewareBasic(middlewareAddress).distributeRewards(
             epoch, eraIndex, totalPointsToken, totalTokensInflated, rewardsRoot, tokenAddress

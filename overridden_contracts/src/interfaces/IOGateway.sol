@@ -51,7 +51,7 @@ interface IOGateway is IGateway {
         uint256 totalPointsToken,
         uint256 totalTokensInflated,
         bytes32 rewardsRoot,
-        bytes error
+        bytes errorBytes
     );
 
     // Emitted when the middleware fails to process rewards
@@ -62,7 +62,7 @@ interface IOGateway is IGateway {
         uint256 totalPointsToken,
         uint256 totalTokensInflated,
         bytes32 rewardsRoot,
-        string error
+        string errorString
     );
 
     // Emitted when the middleware fails to apply the slash message

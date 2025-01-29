@@ -542,9 +542,6 @@ contract GatewayTest is Test {
         IOGateway(address(gateway)).setMiddleware(0x0123456789012345678901234567890123456789);
 
         bytes memory empty;
-        // Expect the gateway to emit `InboundMessageDispatched`
-        // For some reason when you are loading an address not complying an interface, you get an empty message
-        // It still serves us to know that this is the reason
         vm.expectEmit(true, true, true, true);
         emit IOGateway.UnableToProcessRewardsMessageB(empty);
         vm.expectEmit(true, true, true, true);
@@ -583,9 +580,8 @@ contract GatewayTest is Test {
         bytes32 expectedForeignTokenId = bytes32(uint256(1));
 
         address expectedTokenAddress = MockGateway(address(gateway)).tokenAddressOf(expectedForeignTokenId);
-
-        vm.expectEmit(true, true, true, true);
-        emit IOGateway.UnableToProcessRewardsB(
+        bytes memory expectedBytes = abi.encodeWithSelector(
+            Gateway.EUnableToProcessRewardsB.selector,
             expectedEpoch,
             expectedEraIndex,
             expectedTokenAddress,
@@ -594,8 +590,11 @@ contract GatewayTest is Test {
             expectedRewardsRoot,
             expectedError
         );
+
         vm.expectEmit(true, true, true, true);
-        emit IGateway.InboundMessageDispatched(assetHubParaID.into(), 1, messageID, true);
+        emit IOGateway.UnableToProcessRewardsMessageB(expectedBytes);
+        vm.expectEmit(true, true, true, true);
+        emit IGateway.InboundMessageDispatched(assetHubParaID.into(), 1, messageID, false);
 
         hoax(relayer, 1 ether);
         IGateway(address(gateway)).submitV1(

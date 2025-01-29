@@ -104,6 +104,7 @@ contract GatewayTest is Test {
     bytes32 public dotTokenID;
 
     uint256 public constant SLASH_FRACTION = 500_000;
+    uint256 public constant ONE_DAY = 86400;
 
     ChannelID internal constant PRIMARY_GOVERNANCE_CHANNEL_ID = ChannelID.wrap(bytes32(uint256(1)));
     ChannelID internal constant SECONDARY_GOVERNANCE_CHANNEL_ID = ChannelID.wrap(bytes32(uint256(2)));
@@ -182,7 +183,7 @@ contract GatewayTest is Test {
     }
 
     function _makeReportRewardsCommand() public returns (Command, bytes memory, address) {
-        uint256 epoch = 0;
+        uint256 timestamp = ONE_DAY * 3;
         uint256 eraIndex = 1;
         uint256 totalPointsToken = 1 ether;
         uint256 tokensInflatedToken = 1 ether;
@@ -200,7 +201,7 @@ contract GatewayTest is Test {
 
         return (
             Command.ReportRewards,
-            abi.encode(epoch, eraIndex, totalPointsToken, tokensInflatedToken, rewardsRoot, foreignTokenId),
+            abi.encode(timestamp, eraIndex, totalPointsToken, tokensInflatedToken, rewardsRoot, foreignTokenId),
             tokenAddress
         );
     }
@@ -413,12 +414,14 @@ contract GatewayTest is Test {
         bytes memory expectedError = bytes("no process slash");
 
         // We mock the call so that it reverts
-        vm.mockCallRevert(address(1), abi.encodeWithSelector(IMiddlewareBasic.slash.selector), "no process slash");
+        vm.mockCallRevert(
+            address(middleware), abi.encodeWithSelector(IMiddlewareBasic.slash.selector), "no process slash"
+        );
 
         // We mock the call so that it does not revert, but it will revert in the previous one
-        vm.mockCall(address(1), abi.encodeWithSelector(IMiddlewareBasic.getEpochAtTs.selector), abi.encode(10));
+        vm.mockCall(address(middleware), abi.encodeWithSelector(IMiddlewareBasic.getEpochAtTs.selector), abi.encode(10));
 
-        IOGateway(address(gateway)).setMiddleware(address(1));
+        IOGateway(address(gateway)).setMiddleware(address(middleware));
 
         IOGateway.Slash memory expectedSlash =
             IOGateway.Slash({operatorKey: bytes32(uint256(1)), slashFraction: SLASH_FRACTION, timestamp: 1});
@@ -445,12 +448,12 @@ contract GatewayTest is Test {
         (Command command, bytes memory params) = _makeReportSlashesCommand(SLASH_FRACTION);
 
         // We mock the call so that it does not revert
-        vm.mockCall(address(1), abi.encodeWithSelector(IMiddlewareBasic.slash.selector), abi.encode(10));
+        vm.mockCall(address(middleware), abi.encodeWithSelector(IMiddlewareBasic.slash.selector), abi.encode(10));
 
         // We mock the call so that it does not revert
-        vm.mockCall(address(1), abi.encodeWithSelector(IMiddlewareBasic.getEpochAtTs.selector), abi.encode(10));
+        vm.mockCall(address(middleware), abi.encodeWithSelector(IMiddlewareBasic.getEpochAtTs.selector), abi.encode(10));
 
-        IOGateway(address(gateway)).setMiddleware(address(1));
+        IOGateway(address(gateway)).setMiddleware(address(middleware));
 
         // Since we are asserting all fields, the last one is a true, therefore meaning
         // that the dispatch went through correctly
@@ -475,7 +478,7 @@ contract GatewayTest is Test {
     }
 
     function testDecodeRewards() public {
-        uint256 epoch = 123_456_789;
+        uint256 timestamp = 123_456_789;
         uint256 eraIndex = 42;
         uint256 totalPointsToken = 123_456_789_012_345;
         uint256 tokensInflatedToken = 987_654_321_098;
@@ -483,7 +486,7 @@ contract GatewayTest is Test {
         bytes32 foreignTokenId = 0x0101010101010101010101010101010101010101010101010101010101010101;
 
         assertEq(
-            abi.encode(epoch, eraIndex, totalPointsToken, tokensInflatedToken, rewardsRoot, foreignTokenId),
+            abi.encode(timestamp, eraIndex, totalPointsToken, tokensInflatedToken, rewardsRoot, foreignTokenId),
             TEST_VECTOR_REWARDS_DATA
         );
     }
@@ -497,7 +500,7 @@ contract GatewayTest is Test {
         vm.mockCall(
             address(middleware), abi.encodeWithSelector(IMiddlewareBasic.distributeRewards.selector), abi.encode(true)
         );
-
+        vm.mockCall(address(middleware), abi.encodeWithSelector(IMiddlewareBasic.getEpochAtTs.selector), abi.encode(10));
         IOGateway(address(gateway)).setMiddleware(address(middleware));
 
         // Expect the gateway to emit `InboundMessageDispatched`
@@ -572,7 +575,9 @@ contract GatewayTest is Test {
 
         IOGateway(address(gateway)).setMiddleware(address(middleware));
 
-        uint256 expectedEpoch = 0;
+        vm.mockCall(address(middleware), abi.encodeWithSelector(IMiddlewareBasic.getEpochAtTs.selector), abi.encode(10));
+
+        uint256 expectedTimestamp = ONE_DAY * 3;
         uint256 expectedEraIndex = 1;
         uint256 expectedTotalPointsToken = 1 ether;
         uint256 expectedTotalTokensInflated = 1 ether;
@@ -582,7 +587,7 @@ contract GatewayTest is Test {
         address expectedTokenAddress = MockGateway(address(gateway)).tokenAddressOf(expectedForeignTokenId);
         bytes memory expectedBytes = abi.encodeWithSelector(
             Gateway.EUnableToProcessRewardsB.selector,
-            expectedEpoch,
+            expectedTimestamp,
             expectedEraIndex,
             expectedTokenAddress,
             expectedTotalPointsToken,
@@ -616,6 +621,8 @@ contract GatewayTest is Test {
         );
 
         IOGateway(address(gateway)).setMiddleware(address(middleware));
+
+        vm.mockCall(address(middleware), abi.encodeWithSelector(IMiddlewareBasic.getEpochAtTs.selector), abi.encode(10));
 
         vm.expectEmit(true, true, true, true);
         emit IGateway.InboundMessageDispatched(assetHubParaID.into(), 1, messageID, true);

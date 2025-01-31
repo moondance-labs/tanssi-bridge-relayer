@@ -530,7 +530,7 @@ contract Gateway is IOGateway, IInitializable, IUpgradable {
 
         //TODO revert back to epoch when we have it
         (
-            uint256 timestamp,
+            uint256 epoch,
             uint256 eraIndex,
             uint256 totalPointsToken,
             uint256 totalTokensInflated,
@@ -542,16 +542,15 @@ contract Gateway is IOGateway, IInitializable, IUpgradable {
 
         address tokenAddress = Assets.tokenAddressOf(foreignTokenId);
 
-        uint48 epoch = IMiddlewareBasic(middlewareAddress).getEpochAtTs(uint48(timestamp));
         try IMiddlewareBasic(middlewareAddress).distributeRewards(
             epoch, eraIndex, totalPointsToken, totalTokensInflated, rewardsRoot, tokenAddress
         ) {} catch Error(string memory err) {
             revert EUnableToProcessRewardsS(
-                timestamp, eraIndex, tokenAddress, totalPointsToken, totalTokensInflated, rewardsRoot, err
+                epoch, eraIndex, tokenAddress, totalPointsToken, totalTokensInflated, rewardsRoot, err
             );
         } catch (bytes memory err) {
             revert EUnableToProcessRewardsB(
-                timestamp, eraIndex, tokenAddress, totalPointsToken, totalTokensInflated, rewardsRoot, err
+                epoch, eraIndex, tokenAddress, totalPointsToken, totalTokensInflated, rewardsRoot, err
             );
         }
     }

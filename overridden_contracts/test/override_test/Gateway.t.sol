@@ -183,7 +183,7 @@ contract GatewayTest is Test {
     }
 
     function _makeReportRewardsCommand() public returns (Command, bytes memory, address) {
-        uint256 timestamp = ONE_DAY * 3;
+        uint256 epoch = 0;
         uint256 eraIndex = 1;
         uint256 totalPointsToken = 1 ether;
         uint256 tokensInflatedToken = 1 ether;
@@ -201,7 +201,7 @@ contract GatewayTest is Test {
 
         return (
             Command.ReportRewards,
-            abi.encode(timestamp, eraIndex, totalPointsToken, tokensInflatedToken, rewardsRoot, foreignTokenId),
+            abi.encode(epoch, eraIndex, totalPointsToken, tokensInflatedToken, rewardsRoot, foreignTokenId),
             tokenAddress
         );
     }
@@ -478,7 +478,7 @@ contract GatewayTest is Test {
     }
 
     function testDecodeRewards() public {
-        uint256 timestamp = 123_456_789;
+        uint256 epoch = 123_456_789;
         uint256 eraIndex = 42;
         uint256 totalPointsToken = 123_456_789_012_345;
         uint256 tokensInflatedToken = 987_654_321_098;
@@ -486,7 +486,7 @@ contract GatewayTest is Test {
         bytes32 foreignTokenId = 0x0101010101010101010101010101010101010101010101010101010101010101;
 
         assertEq(
-            abi.encode(timestamp, eraIndex, totalPointsToken, tokensInflatedToken, rewardsRoot, foreignTokenId),
+            abi.encode(epoch, eraIndex, totalPointsToken, tokensInflatedToken, rewardsRoot, foreignTokenId),
             TEST_VECTOR_REWARDS_DATA
         );
     }
@@ -500,7 +500,7 @@ contract GatewayTest is Test {
         vm.mockCall(
             address(middleware), abi.encodeWithSelector(IMiddlewareBasic.distributeRewards.selector), abi.encode(true)
         );
-        vm.mockCall(address(middleware), abi.encodeWithSelector(IMiddlewareBasic.getEpochAtTs.selector), abi.encode(10));
+
         IOGateway(address(gateway)).setMiddleware(address(middleware));
 
         // Expect the gateway to emit `InboundMessageDispatched`
@@ -575,9 +575,7 @@ contract GatewayTest is Test {
 
         IOGateway(address(gateway)).setMiddleware(address(middleware));
 
-        vm.mockCall(address(middleware), abi.encodeWithSelector(IMiddlewareBasic.getEpochAtTs.selector), abi.encode(10));
-
-        uint256 expectedTimestamp = ONE_DAY * 3;
+        uint256 expectedEpoch = 0;
         uint256 expectedEraIndex = 1;
         uint256 expectedTotalPointsToken = 1 ether;
         uint256 expectedTotalTokensInflated = 1 ether;
@@ -587,7 +585,7 @@ contract GatewayTest is Test {
         address expectedTokenAddress = MockGateway(address(gateway)).tokenAddressOf(expectedForeignTokenId);
         bytes memory expectedBytes = abi.encodeWithSelector(
             Gateway.EUnableToProcessRewardsB.selector,
-            expectedTimestamp,
+            expectedEpoch,
             expectedEraIndex,
             expectedTokenAddress,
             expectedTotalPointsToken,
@@ -621,8 +619,6 @@ contract GatewayTest is Test {
         );
 
         IOGateway(address(gateway)).setMiddleware(address(middleware));
-
-        vm.mockCall(address(middleware), abi.encodeWithSelector(IMiddlewareBasic.getEpochAtTs.selector), abi.encode(10));
 
         vm.expectEmit(true, true, true, true);
         emit IGateway.InboundMessageDispatched(assetHubParaID.into(), 1, messageID, true);

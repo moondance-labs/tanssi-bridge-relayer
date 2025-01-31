@@ -29,12 +29,12 @@ interface IOGateway is IGateway {
 
     // Emitted when the middleware fails to apply an individual slash
     event UnableToProcessIndividualSlashB(
-        bytes32 indexed operatorKey, uint256 slashFranction, uint256 indexed timestamp, bytes error
+        bytes32 indexed operatorKey, uint256 slashFranction, uint256 indexed epoch, bytes error
     );
 
     // Emitted when the middleware fails to apply an individual slash
     event UnableToProcessIndividualSlashS(
-        bytes32 indexed operatorKey, uint256 slashFranction, uint256 indexed timestamp, string error
+        bytes32 indexed operatorKey, uint256 slashFranction, uint256 indexed epoch, string error
     );
 
     // Emitted when the middleware fails to apply the slash message
@@ -52,11 +52,11 @@ interface IOGateway is IGateway {
     // Slash struct, used to decode slashes, which are identified by
     // operatorKey to be slashed
     // slashFraction to be applied as parts per billion
-    // timestamp identifying when the slash happened
+    // epoch identifying when the slash happened
     struct Slash {
         bytes32 operatorKey;
         uint256 slashFraction;
-        uint256 timestamp;
+        uint256 epoch;
     }
 
     struct SlashParams {

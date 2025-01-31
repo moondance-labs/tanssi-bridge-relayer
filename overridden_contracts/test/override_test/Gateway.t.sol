@@ -447,7 +447,6 @@ contract GatewayTest is Test {
         // We mock the call so that it does not revert
         vm.mockCall(address(middleware), abi.encodeWithSelector(IMiddlewareBasic.slash.selector), abi.encode(10));
 
-
         IOGateway(address(gateway)).setMiddleware(address(middleware));
 
         // Since we are asserting all fields, the last one is a true, therefore meaning

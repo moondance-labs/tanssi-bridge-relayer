@@ -507,14 +507,10 @@ contract Gateway is IOGateway, IInitializable, IUpgradable {
             //TODO maxDispatchGas should be probably be defined for all slashes, not only for one
             try middleware.slash(uint48(slash.epoch), slash.operatorKey, slash.slashFraction) {}
             catch Error(string memory err) {
-                emit UnableToProcessIndividualSlashS(
-                    slash.operatorKey, slash.slashFraction, slash.epoch, err
-                );
+                emit UnableToProcessIndividualSlashS(slash.operatorKey, slash.slashFraction, slash.epoch, err);
                 continue;
             } catch (bytes memory err) {
-                emit UnableToProcessIndividualSlashB(
-                    slash.operatorKey, slash.slashFraction, slash.epoch, err
-                );
+                emit UnableToProcessIndividualSlashB(slash.operatorKey, slash.slashFraction, slash.epoch, err);
                 continue;
             }
         }

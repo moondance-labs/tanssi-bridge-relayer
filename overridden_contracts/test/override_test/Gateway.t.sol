@@ -177,7 +177,7 @@ contract GatewayTest is Test {
 
     function _makeReportSlashesCommand(uint256 slashFraction) public pure returns (Command, bytes memory) {
         IOGateway.Slash[] memory slashes = new IOGateway.Slash[](1);
-        slashes[0] = IOGateway.Slash({operatorKey: bytes32(uint256(1)), slashFraction: slashFraction, timestamp: 1});
+        slashes[0] = IOGateway.Slash({operatorKey: bytes32(uint256(1)), slashFraction: slashFraction, epoch: 1});
         uint256 eraIndex = 1;
         return (Command.ReportSlashes, abi.encode(IOGateway.SlashParams({eraIndex: eraIndex, slashes: slashes})));
     }
@@ -353,9 +353,9 @@ contract GatewayTest is Test {
         bytes32 bob = 0x0505050505050505050505050505050505050505050505050505050505050505;
         bytes32 charlie = 0x0606060606060606060606060606060606060606060606060606060606060606;
 
-        slashes[0] = IOGateway.Slash({operatorKey: alice, slashFraction: 5_000, timestamp: 500});
-        slashes[1] = IOGateway.Slash({operatorKey: bob, slashFraction: 4_000, timestamp: 400});
-        slashes[2] = IOGateway.Slash({operatorKey: charlie, slashFraction: 3_000, timestamp: 300});
+        slashes[0] = IOGateway.Slash({operatorKey: alice, slashFraction: 5_000, epoch: 500});
+        slashes[1] = IOGateway.Slash({operatorKey: bob, slashFraction: 4_000, epoch: 400});
+        slashes[2] = IOGateway.Slash({operatorKey: charlie, slashFraction: 3_000, epoch: 300});
 
         assertEq(abi.encode(IOGateway.SlashParams({eraIndex: eraIndex, slashes: slashes})), TEST_VECTOR_SLASH_DATA);
     }
@@ -418,17 +418,14 @@ contract GatewayTest is Test {
             address(middleware), abi.encodeWithSelector(IMiddlewareBasic.slash.selector), "no process slash"
         );
 
-        // We mock the call so that it does not revert, but it will revert in the previous one
-        vm.mockCall(address(middleware), abi.encodeWithSelector(IMiddlewareBasic.getEpochAtTs.selector), abi.encode(10));
-
         IOGateway(address(gateway)).setMiddleware(address(middleware));
 
         IOGateway.Slash memory expectedSlash =
-            IOGateway.Slash({operatorKey: bytes32(uint256(1)), slashFraction: SLASH_FRACTION, timestamp: 1});
+            IOGateway.Slash({operatorKey: bytes32(uint256(1)), slashFraction: SLASH_FRACTION, epoch: 1});
 
         vm.expectEmit(true, true, true, true);
         emit IOGateway.UnableToProcessIndividualSlashB(
-            expectedSlash.operatorKey, expectedSlash.slashFraction, expectedSlash.timestamp, expectedError
+            expectedSlash.operatorKey, expectedSlash.slashFraction, expectedSlash.epoch, expectedError
         );
         vm.expectEmit(true, true, true, true);
         emit IGateway.InboundMessageDispatched(assetHubParaID.into(), 1, messageID, true);
@@ -449,9 +446,6 @@ contract GatewayTest is Test {
 
         // We mock the call so that it does not revert
         vm.mockCall(address(middleware), abi.encodeWithSelector(IMiddlewareBasic.slash.selector), abi.encode(10));
-
-        // We mock the call so that it does not revert
-        vm.mockCall(address(middleware), abi.encodeWithSelector(IMiddlewareBasic.getEpochAtTs.selector), abi.encode(10));
 
         IOGateway(address(gateway)).setMiddleware(address(middleware));
 

@@ -503,18 +503,14 @@ contract Gateway is IOGateway, IInitializable, IUpgradable {
         // At most it will be 10, defined by
         // https://github.com/moondance-labs/tanssi/blob/88e59e6e5afb198947690487f286b9ad7cd4cde6/chains/orchestrator-relays/runtime/dancelight/src/lib.rs#L1446
         for (uint256 i = 0; i < slashes.slashes.length; ++i) {
-            uint48 epoch = middleware.getEpochAtTs(uint48(slashes.slashes[i].timestamp));
+            Slash memory slash = slashes.slashes[i];
             //TODO maxDispatchGas should be probably be defined for all slashes, not only for one
-            try middleware.slash(epoch, slashes.slashes[i].operatorKey, slashes.slashes[i].slashFraction) {}
+            try middleware.slash(uint48(slash.epoch), slash.operatorKey, slash.slashFraction) {}
             catch Error(string memory err) {
-                emit UnableToProcessIndividualSlashS(
-                    slashes.slashes[i].operatorKey, slashes.slashes[i].slashFraction, slashes.slashes[i].timestamp, err
-                );
+                emit UnableToProcessIndividualSlashS(slash.operatorKey, slash.slashFraction, slash.epoch, err);
                 continue;
             } catch (bytes memory err) {
-                emit UnableToProcessIndividualSlashB(
-                    slashes.slashes[i].operatorKey, slashes.slashes[i].slashFraction, slashes.slashes[i].timestamp, err
-                );
+                emit UnableToProcessIndividualSlashB(slash.operatorKey, slash.slashFraction, slash.epoch, err);
                 continue;
             }
         }
@@ -528,7 +524,6 @@ contract Gateway is IOGateway, IInitializable, IUpgradable {
             revert MiddlewareNotSet();
         }
 
-        //TODO revert back to epoch when we have it
         (
             uint256 epoch,
             uint256 eraIndex,

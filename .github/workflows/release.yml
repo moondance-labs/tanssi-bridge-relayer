@@ -6,8 +6,6 @@ on:
       runtime_version:
         type: string
         description: Latest runtime version compatible with
-      message:
-        required: true
       snowbridge_version:
         type: string
         description: Linked snowbridge version

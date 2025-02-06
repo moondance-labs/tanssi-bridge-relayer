@@ -1,9 +1,6 @@
 name: release-relayer
 
 on:
-  push:
-    branches:
-      "*"
   workflow_dispatch:
     inputs:
       runtime_version:

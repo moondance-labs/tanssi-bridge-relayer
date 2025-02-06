@@ -58,10 +58,12 @@ jobs:
         run: |
           # Get the most recent tag in the format relayer-v<version>
           current_tag=$(git tag --list "relayer-v*" --sort=-v:refname | head -n 1)
+          exp=$(git tag --list)
           new_tag="relayer-v${{ inputs.snowbridge_version }}-${{ inputs.runtime_version }}"
           
           echo "Old tag: $current_tag"
           echo "New tag: $new_tag"
+          echo "Exp: $exp"
           echo "new_tag=$new_tag" >> $GITHUB_OUTPUT
           echo "from_tag=$current_tag" >> $GITHUB_OUTPUT
 

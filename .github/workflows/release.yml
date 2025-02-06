@@ -39,14 +39,12 @@ jobs:
         uses: foundry-rs/foundry-toolchain@v1
 
       - name: Install dependencies
-        working-directory: relayer
         run: go mod download
 
       - name: Add gopath to bin
         run: echo "$HOME/go/bin" >> $GITHUB_PATH
 
       - name: Build
-        working-directory: relayer
         run: CGO_ENABLED=1 GOOS=linux GOARCH=amd64 mage build
 
       - name: Configure Git

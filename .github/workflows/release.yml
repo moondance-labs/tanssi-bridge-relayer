@@ -84,7 +84,7 @@ jobs:
         with:
           configurationJson: |
             {
-              "template": "#{{CHANGELOG}}\n\n<details>\n</details>",
+              "template": "#{{CHANGELOG}}",
               "categories": [
                 {
                     "title": "## Relayer Changes",

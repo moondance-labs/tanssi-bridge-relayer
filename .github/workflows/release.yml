@@ -84,13 +84,7 @@ jobs:
         with:
           configurationJson: |
             {
-              "template": "#{{CHANGELOG}}\n\n<details>\n</details>",
-              "categories": [
-                {
-                    "title": "## Relayer Changes",
-                    "labels": ["Component: Relayer"]
-                }
-              ]
+              "template": "#{{CHANGELOG}}\n\n<details>\n</details>"
             }
           fromTag: ${{ steps.new_version.outputs.from_tag }}
           toTag: ${{ steps.create_tag.outputs.tag }}

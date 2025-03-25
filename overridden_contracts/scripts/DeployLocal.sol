@@ -5,7 +5,7 @@ pragma solidity 0.8.25;
 import {WETH9} from "canonical-weth/WETH9.sol";
 import {Script} from "forge-std/Script.sol";
 import {BeefyClient} from "../src/BeefyClient.sol";
-import {console2} from "forge-std/console2.sol";
+
 import {IGateway} from "../src/interfaces/IGateway.sol";
 import {GatewayProxy} from "../src/GatewayProxy.sol";
 import {Gateway} from "../src/Gateway.sol";
@@ -93,9 +93,22 @@ contract DeployLocal is Script {
 
         GatewayProxy gateway = new GatewayProxy(address(gatewayLogic), abi.encode(config));
 
-        console2.log("BeefyClient: ", address(beefyClient));
-        console2.log("Gateway: ", address(gateway));
-        console2.log("Gateway Implementation: ", address(gatewayLogic));
+        // Deploy WETH for testing
+        new WETH9();
+
+        // Fund the sovereign account for the BridgeHub parachain. Used to reward relayers
+        // of messages originating from BridgeHub
+        uint256 initialDeposit = vm.envUint("BRIDGE_HUB_INITIAL_DEPOSIT");
+
+        address bridgeHubAgent = IGateway(address(gateway)).agentOf(bridgeHubAgentID);
+        address assetHubAgent = IGateway(address(gateway)).agentOf(assetHubAgentID);
+
+        payable(bridgeHubAgent).safeNativeTransfer(initialDeposit);
+        payable(assetHubAgent).safeNativeTransfer(initialDeposit);
+
+        // Deploy MockGatewayV2 for testing
+        new MockGatewayV2();
+
         vm.stopBroadcast();
     }
 }

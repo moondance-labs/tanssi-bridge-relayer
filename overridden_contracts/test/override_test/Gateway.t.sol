@@ -639,7 +639,7 @@ contract GatewayTest is Test {
         Command command = Command.Reserved12;
 
         vm.expectEmit(true, false, false, false);
-        emit IOGateway.NotImplementedCommand();
+        emit IOGateway.NotImplementedCommand(Command.Reserved12);
 
         vm.expectEmit(true, true, true, true);
         emit IGateway.InboundMessageDispatched(assetHubParaID.into(), 1, messageID, false);

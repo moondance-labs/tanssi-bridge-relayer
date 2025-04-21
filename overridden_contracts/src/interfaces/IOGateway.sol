@@ -50,7 +50,7 @@ interface IOGateway is IGateway {
     event UnableToProcessRewardsMessageS(string error);
 
     // Emitted when a non accepted command is received
-    event NotImplementedCommand();
+    event NotImplementedCommand(Command command);
 
     // Slash struct, used to decode slashes, which are identified by
     // operatorKey to be slashed

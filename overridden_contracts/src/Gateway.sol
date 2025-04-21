@@ -296,7 +296,7 @@ contract Gateway is IOGateway, IInitializable, IUpgradable {
             }
         } else {
             success = false;
-            emit NotImplementedCommand();
+            emit NotImplementedCommand(message.command);
         }
 
         // Calculate a gas refund, capped to protect against huge spikes in `tx.gasprice`

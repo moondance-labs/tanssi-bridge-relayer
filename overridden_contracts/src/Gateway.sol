@@ -294,7 +294,7 @@ contract Gateway is IOGateway, IInitializable, IUpgradable {
                 emit UnableToProcessRewardsMessageB(err);
                 success = false;
             }
-        } else{
+        } else {
             success = false;
             emit NotImplementedCommand();
         }

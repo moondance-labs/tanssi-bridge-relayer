@@ -294,6 +294,9 @@ contract Gateway is IOGateway, IInitializable, IUpgradable {
                 emit UnableToProcessRewardsMessageB(err);
                 success = false;
             }
+        } else {
+            success = false;
+            emit NotImplementedCommand(message.command);
         }
 
         // Calculate a gas refund, capped to protect against huge spikes in `tx.gasprice`

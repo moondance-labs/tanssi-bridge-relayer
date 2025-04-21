@@ -14,7 +14,7 @@
 // along with Tanssi.  If not, see <http://www.gnu.org/licenses/>
 pragma solidity ^0.8.0;
 
-import {ParaID} from "../Types.sol";
+import {ParaID, Command} from "../Types.sol";
 import {IGateway} from "./IGateway.sol";
 
 interface IOGateway is IGateway {
@@ -48,6 +48,9 @@ interface IOGateway is IGateway {
 
     // Emitted when the middleware fails to apply the slash message
     event UnableToProcessRewardsMessageS(string error);
+
+    // Emitted when a non accepted command is received
+    event NotImplementedCommand(Command command);
 
     // Slash struct, used to decode slashes, which are identified by
     // operatorKey to be slashed

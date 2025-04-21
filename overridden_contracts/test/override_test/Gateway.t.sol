@@ -638,7 +638,7 @@ contract GatewayTest is Test {
         deal(assetHubAgent, 50 ether);
         Command command = Command.Reserved12;
 
-        vm.expectEmit(true,false,false,false);
+        vm.expectEmit(true, false, false, false);
         emit IOGateway.NotImplementedCommand();
 
         vm.expectEmit(true, true, true, true);

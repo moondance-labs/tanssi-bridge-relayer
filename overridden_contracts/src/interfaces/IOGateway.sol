@@ -49,6 +49,9 @@ interface IOGateway is IGateway {
     // Emitted when the middleware fails to apply the slash message
     event UnableToProcessRewardsMessageS(string error);
 
+    // Emitted when a non accepted command is received
+    event NotImplementedCommand();
+
     // Slash struct, used to decode slashes, which are identified by
     // operatorKey to be slashed
     // slashFraction to be applied as parts per billion

@@ -632,4 +632,24 @@ contract GatewayTest is Test {
             assertNotEq(entries[i].topics[0], IOGateway.UnableToProcessRewardsMessageS.selector);
         }
     }
+
+    // middleware set, complying interface and rewards processed
+    function testCommandUnrecognizedShouldEmitNotImplementedCommand() public {
+        deal(assetHubAgent, 50 ether);
+        Command command = Command.Reserved12;
+
+        vm.expectEmit(true,false,false,false);
+        emit IOGateway.NotImplementedCommand();
+
+        vm.expectEmit(true, true, true, true);
+        emit IGateway.InboundMessageDispatched(assetHubParaID.into(), 1, messageID, false);
+
+        hoax(relayer, 1 ether);
+        vm.recordLogs();
+        IGateway(address(gateway)).submitV1(
+            InboundMessage(assetHubParaID.into(), 1, command, hex"", maxDispatchGas, maxRefund, reward, messageID),
+            proof,
+            makeMockProof()
+        );
+    }
 }

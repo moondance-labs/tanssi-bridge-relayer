@@ -14,7 +14,7 @@
 // along with Tanssi.  If not, see <http://www.gnu.org/licenses/>
 pragma solidity ^0.8.0;
 
-import {ParaID} from "../Types.sol";
+import {ParaID, Command} from "../Types.sol";
 import {IGateway} from "./IGateway.sol";
 
 interface IOGateway is IGateway {

@@ -169,15 +169,6 @@ func (s *Scanner) findTasksImpl(
 			if err != nil {
 				return nil, fmt.Errorf("decode message error: %w", err)
 			}
-			isBanned, err := s.IsBanned(m)
-			if err != nil {
-				log.WithError(err).Fatal("error checking banned address found")
-				return nil, fmt.Errorf("banned check: %w", err)
-			}
-			if isBanned {
-				log.Fatal("banned address found")
-				return nil, errors.New("banned address found")
-			}
 			messages = append(messages, m)
 		}
 

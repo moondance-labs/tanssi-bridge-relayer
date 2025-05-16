@@ -69,6 +69,7 @@ require (
 	github.com/mimoo/StrobeGo v0.0.0-20220103164710-9a04d6ca976b // indirect
 	github.com/minio/sha256-simd v1.0.1 // indirect
 	github.com/mmcloughlin/addchain v0.4.0 // indirect
+	github.com/moondance-labs/snowbridge v0.0.0-20250516154137-7e690e30ca32 // indirect
 	github.com/olekukonko/tablewriter v0.0.5 // indirect
 	github.com/pelletier/go-toml/v2 v2.1.1 // indirect
 	github.com/pierrec/xxHash v0.1.5 // indirect

@@ -3,6 +3,7 @@ package solochain
 import (
 	"fmt"
 
+    // TODO: This reference should go to snowbridge/relayer/contracts
 	"github.com/moondance-labs/tanssi-bridge-relayer/relays/contracts"
 	log "github.com/sirupsen/logrus"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"

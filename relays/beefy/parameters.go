@@ -6,7 +6,7 @@ import (
 	"math/big"
 
 	"github.com/holiman/uint256"
-	// TODO: This reference should go to snowbridge/relayer/contracts
+	// TODO: This reference should go to moondsnce-labs/snowbridge/relayer/contracts
 	"github.com/moondance-labs/tanssi-bridge-relayer/relays/contracts"
 	"github.com/sirupsen/logrus"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"

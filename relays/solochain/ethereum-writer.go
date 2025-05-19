@@ -13,7 +13,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 
-    // TODO: This reference should go to snowbridge/relayer/contracts
+    // TODO: This reference should go to moondsnce-labs/snowbridge/relayer/contracts
 	"github.com/moondance-labs/tanssi-bridge-relayer/relays/contracts"
 	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
 	"github.com/snowfork/snowbridge/relayer/crypto/keccak"

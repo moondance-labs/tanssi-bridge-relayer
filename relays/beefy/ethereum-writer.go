@@ -15,7 +15,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-    // TODO: This reference should go to snowbridge/relayer/contracts
+    // TODO: This reference should go to moondsnce-labs/snowbridge/relayer/contracts
 	"github.com/moondance-labs/tanssi-bridge-relayer/relays/contracts"
 	"github.com/snowfork/snowbridge/relayer/chain/ethereum"
 	"github.com/snowfork/snowbridge/relayer/relays/beefy/bitfield"

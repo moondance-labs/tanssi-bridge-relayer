@@ -9,6 +9,10 @@ on:
       snowbridge_version:
         type: string
         description: Linked snowbridge version
+      ref:
+        description: 'Commit SHA or branch to release from'
+        required: false
+        default: 'main'
 
 jobs:
   release-relayer:
@@ -20,6 +24,7 @@ jobs:
           fetch-depth: 0
           submodules: 'true'
           fetch-tags: 'true'
+          ref: ${{ github.event.inputs.ref }}
 
       - name: Set up Node.js
         uses: actions/setup-node@v2

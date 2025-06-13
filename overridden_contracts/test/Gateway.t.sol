@@ -1045,5 +1045,4 @@ contract GatewayTest is Test {
         vm.expectRevert(abi.encodeWithSelector(Gateway.Unauthorized.selector));
         MockGateway(address(gateway)).upgradeOnlyOwner(abi.encode(params));
     }
-
 }

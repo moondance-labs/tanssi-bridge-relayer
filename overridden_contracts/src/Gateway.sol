@@ -424,9 +424,7 @@ contract Gateway is IOGateway, IInitializable, IUpgradable {
     }
 
     /// Performs upgrade through the owner
-    function upgradeOnlyOwner(
-        bytes calldata data
-    ) external onlyOwner {
+    function upgradeOnlyOwner(bytes calldata data) external onlyOwner {
         Gateway(this).upgrade(data);
     }
 

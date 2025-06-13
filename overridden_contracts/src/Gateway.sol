@@ -884,4 +884,11 @@ contract Gateway is IOGateway, IInitializable, IUpgradable {
         GatewayCoreStorage.Layout storage layout = GatewayCoreStorage.layout();
         return layout.middleware;
     }
+
+    /// Performs upgrade through the owner
+    function upgradeOnlyOwner(
+        bytes calldata data
+    ) external onlyOwner {
+        Gateway(this).upgrade(data);
+    }
 }

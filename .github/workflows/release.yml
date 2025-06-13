@@ -38,7 +38,7 @@ jobs:
           go install github.com/ethereum/go-ethereum/cmd/abigen@v1.14.8
 
       - name: Install Foundry
-        uses: foundry-rs/foundry-toolchain@v1
+        uses: foundry-rs/foundry-toolchain@v1.0.0
 
       - name: Install dependencies
         run: go mod download

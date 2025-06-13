@@ -1,5 +1,4 @@
 # This workflow will test relayer
-
 name: Test
 
 on:
@@ -8,8 +7,11 @@ on:
   pull_request:
     branches: [ "main" ]
 
-jobs:
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
+jobs:
   test:
     runs-on: ubuntu-latest
     steps:

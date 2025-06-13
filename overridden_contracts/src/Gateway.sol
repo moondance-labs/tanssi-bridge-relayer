@@ -423,6 +423,13 @@ contract Gateway is IOGateway, IInitializable, IUpgradable {
         emit ChannelUpdated(params.channelID);
     }
 
+    /// Performs upgrade through the owner
+    function upgradeOnlyOwner(
+        bytes calldata data
+    ) external onlyOwner {
+        Gateway(this).upgrade(data);
+    }
+
     /// @dev Perform an upgrade of the gateway
     function upgrade(bytes calldata data) external onlySelf {
         UpgradeParams memory params = abi.decode(data, (UpgradeParams));
@@ -883,12 +890,5 @@ contract Gateway is IOGateway, IInitializable, IUpgradable {
     function s_middleware() external view returns (address) {
         GatewayCoreStorage.Layout storage layout = GatewayCoreStorage.layout();
         return layout.middleware;
-    }
-
-    /// Performs upgrade through the owner
-    function upgradeOnlyOwner(
-        bytes calldata data
-    ) external onlyOwner {
-        Gateway(this).upgrade(data);
     }
 }

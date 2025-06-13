@@ -25,10 +25,11 @@ jobs:
       with:
         go-version: '1.23'
 
+
     - name: Install Foundry
       uses: foundry-rs/foundry-toolchain@v1
       with:
-          version: stable
+        version: "v1.1.0"
 
     - name: Show Forge version
       run: forge --version

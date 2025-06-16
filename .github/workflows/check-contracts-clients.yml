@@ -1,0 +1,63 @@
+# Check if Go clients consistent with contracts
+
+name: Check Contracts Clients
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Check jq
+      run: jq --version
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.23'
+
+    - name: Install Foundry
+      uses: foundry-rs/foundry-toolchain@v1
+      with:
+        version: "v1.1.0"
+
+    - name: Show Forge version
+      run: forge --version
+
+    - name: Install abigen
+      run: go install github.com/ethereum/go-ethereum/cmd/abigen@v1.14.11
+
+    - name: Check abigen
+      run: abigen --version
+
+    - name: Generate clients
+      run: |
+        FOLDER="$(mktemp -d)"
+        REPO="https://github.com/moondance-labs/snowbridge.git"
+        commit_hash="$(go mod edit -json | jq -r '.Replace[] | select(.Old.Path=="github.com/snowfork/snowbridge/relayer") | .New.Version' | cut -d '-' -f 3)"
+        
+        if [ -z "$commit_hash" ]; then
+            echo "No commit hash found for snowfork/snowbridge/relayer"
+            exit 1
+        fi
+        
+        git clone "https://github.com/moondance-labs/snowbridge.git" --depth 1 --branch "$commit_hash" $FOLDER
+        
+        pushd "$FOLDER/contracts"
+          forge build
+        popd
+        
+        jq .abi "$FOLDER/contracts/out/BeefyClient.sol/BeefyClient.json" | abigen --abi - --type BeefyClient --pkg contracts --out relays/contracts/beefy_client.go
+        jq .abi "$FOLDER/contracts/out/IGateway.sol/IGateway.json" | abigen --abi - --type Gateway --pkg contracts --out relays/contracts/gateway.go
+        
+        rm -rf "$FOLDER"
+
+    - name: Check if go contract bindings are up-to-date
+      run: git diff --exit-code ./relays/contracts || (echo "The contract bindings are not up-to-date against contracts." && exit 1)

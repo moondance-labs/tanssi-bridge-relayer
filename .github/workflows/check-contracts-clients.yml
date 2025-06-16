@@ -55,6 +55,7 @@ jobs:
         
         cd "$FOLDER"
         git checkout "$commit_hash"
+        forge install
         forge build
         cd ../
         

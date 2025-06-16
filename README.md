@@ -73,3 +73,4 @@ Then run the following command:
 ```bash
 forge script scripts/DeployLocal.sol --rpc-url ${RPC_URL} --private-key ${PRIVATE_KEY} --slow --skip-simulation --broadcast --verify --etherscan-api-key ${ETHERSCAN_API_KEY}
 ```
+

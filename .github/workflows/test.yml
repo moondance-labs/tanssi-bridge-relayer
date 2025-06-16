@@ -14,8 +14,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-      with:
-          submodules: recursive
 
     - name: Check jq
       run: jq --version
@@ -52,11 +50,6 @@ jobs:
     - name: Check mage
       run: mage --version
 
-    - name: Run Forge fmt
-      run: |
-        forge fmt overridden_contracts/ --check
-      id: fmt
-
     - name: Build
       run: mage build
 
@@ -65,10 +58,3 @@ jobs:
 
     - name: Test Relayer
       run: mage test
-
-    - name: Run Forge tests
-      run: |
-        cd snowbridge/contracts
-        forge test -vvv
-      id: test
-

@@ -13,16 +13,6 @@ func Build() {
 }
 
 func BuildMain() error {
-	err := sh.Run("sszgen", "--path", "snowbridge/relayer/relays/beacon/state", "--objs", "BlockRootsContainerMainnet,TransactionsRootContainer,WithdrawalsRootContainerMainnet,BeaconStateDenebMainnet,BeaconBlockDenebMainnet,SignedBeaconBlockDeneb,SignedBeaconBlockElectra,BeaconStateElectra,BeaconBlockElectra")
-	if err != nil {
-		return err
-	}
-
-	err = sh.Run("./add_overridden_contracts.sh")
-	if err != nil {
-		return err
-	}
-
 	err = sh.Run("./update_contract_interface.sh")
 	if err != nil {
 		return err

@@ -13,7 +13,7 @@ func Build() {
 }
 
 func BuildMain() error {
-	err = sh.Run("./update_contract_interface.sh")
+	err := sh.Run("./update_contract_interface.sh")
 	if err != nil {
 		return err
 	}

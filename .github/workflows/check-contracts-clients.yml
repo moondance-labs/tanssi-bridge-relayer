@@ -42,7 +42,8 @@ jobs:
 
     - name: Generate clients
       run: |
-        FOLDER="$(mktemp -d)"
+        TEMP_FOLDER="$(mktemp -d)"
+        CURRENT_FOLDER="$(pwd)"
         REPO="https://github.com/moondance-labs/snowbridge.git"
         commit_hash="$(go mod edit -json | jq -r '.Replace[] | select(.Old.Path=="github.com/snowfork/snowbridge/relayer") | .New.Version' | cut -d '-' -f 3)"
         
@@ -51,18 +52,18 @@ jobs:
             exit 1
         fi
         
-        git clone "https://github.com/moondance-labs/snowbridge.git" $FOLDER
+        git clone "https://github.com/moondance-labs/snowbridge.git" $TEMP_FOLDER
         
-        cd "$FOLDER"
+        cd "$TEMP_FOLDER"
         git checkout "$commit_hash"
         cd contracts
         forge build
         cd ../
         
-        jq .abi "$FOLDER/contracts/out/BeefyClient.sol/BeefyClient.json" | abigen --abi - --type BeefyClient --pkg contracts --out relays/contracts/beefy_client.go
-        jq .abi "$FOLDER/contracts/out/IGateway.sol/IGateway.json" | abigen --abi - --type Gateway --pkg contracts --out relays/contracts/gateway.go
+        jq .abi "$TEMP_FOLDER/contracts/out/BeefyClient.sol/BeefyClient.json" | abigen --abi - --type BeefyClient --pkg contracts --out $CURRENT_FOLDER/relays/contracts/beefy_client.go
+        jq .abi "$TEMP_FOLDER/contracts/out/IGateway.sol/IGateway.json" | abigen --abi - --type Gateway --pkg contracts --out $CURRENT_FOLDER/relays/contracts/gateway.go
         
-        rm -rf "$FOLDER"
+        rm -rf "$TEMP_FOLDER"
 
     - name: Check if go contract bindings are up-to-date
       run: git diff --exit-code ./relays/contracts || (echo "The contract bindings are not up-to-date against contracts." && exit 1)

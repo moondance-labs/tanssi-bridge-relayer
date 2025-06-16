@@ -51,11 +51,12 @@ jobs:
             exit 1
         fi
         
-        git clone "https://github.com/moondance-labs/snowbridge.git" --depth 1 --branch "$commit_hash" $FOLDER
+        git clone "https://github.com/moondance-labs/snowbridge.git" $FOLDER
         
-        pushd "$FOLDER/contracts"
-          forge build
-        popd
+        cd "$FOLDER"
+        git checkout "$commit_hash"
+        forge build
+        cd ../
         
         jq .abi "$FOLDER/contracts/out/BeefyClient.sol/BeefyClient.json" | abigen --abi - --type BeefyClient --pkg contracts --out relays/contracts/beefy_client.go
         jq .abi "$FOLDER/contracts/out/IGateway.sol/IGateway.json" | abigen --abi - --type Gateway --pkg contracts --out relays/contracts/gateway.go

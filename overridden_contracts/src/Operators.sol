@@ -46,7 +46,8 @@ library Operators {
         // TODO For now mock it to 0
         ticket.costs = Costs(0, 0);
 
-        ticket.payload = OSubstrateTypes.EncodedOperatorsData(operatorsKeys, uint32(validatorsKeysLength), epoch);
+        ticket.payload =
+            OSubstrateTypes.EncodedOperatorsData(abi.encodePacked(operatorsKeys), uint32(validatorsKeysLength), epoch);
         emit IOGateway.OperatorsDataCreated(validatorsKeysLength, ticket.payload);
     }
 }

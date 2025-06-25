@@ -14,7 +14,6 @@ import {OperatingMode} from "../src/Types.sol";
 import {HelperConfig} from "./HelperConfig.sol";
 
 contract DeployLocal is Script {
-    using SafeNativeTransfer for address payable;
     using stdJson for string;
 
     function setUp() public {}

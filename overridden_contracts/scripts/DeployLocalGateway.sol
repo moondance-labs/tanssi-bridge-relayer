@@ -6,7 +6,6 @@ import {console2} from "forge-std/console2.sol";
 import {Script} from "forge-std/Script.sol";
 import {stdJson} from "forge-std/StdJson.sol";
 
-import {WETH9} from "canonical-weth/WETH9.sol";
 import {GatewayProxy} from "../src/GatewayProxy.sol";
 import {Gateway} from "../src/Gateway.sol";
 import {OperatingMode} from "../src/Types.sol";

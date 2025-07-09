@@ -26,24 +26,17 @@ library OSubstrateTypes {
         ReceiveValidators
     }
 
-    function EncodedOperatorsData(bytes32[] calldata operatorsKeys, uint32 operatorsCount, uint48 epoch)
+    function EncodedOperatorsData(bytes memory encodedOperatorsKeys, uint32 operatorsCount, uint48 epoch)
         internal
-        view
+        pure
         returns (bytes memory)
     {
-        bytes memory operatorsFlattened = new bytes(operatorsCount * 32);
-        for (uint32 i = 0; i < operatorsCount; i++) {
-            for (uint32 j = 0; j < 32; j++) {
-                operatorsFlattened[i * 32 + j] = operatorsKeys[i][j];
-            }
-        }
-
         return bytes.concat(
             bytes4(0x70150038),
             bytes1(uint8(Message.V0)),
             bytes1(uint8(OutboundCommandV1.ReceiveValidators)),
             ScaleCodec.encodeCompactU32(operatorsCount),
-            operatorsFlattened,
+            encodedOperatorsKeys,
             ScaleCodec.encodeU64(uint64(epoch))
         );
     }

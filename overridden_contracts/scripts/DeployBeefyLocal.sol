@@ -6,6 +6,7 @@ import {Script, console2} from "forge-std/Script.sol";
 import {stdJson} from "forge-std/StdJson.sol";
 
 import {BeefyClient} from "../src/BeefyClient.sol";
+import {HelperConfig} from "./HelperConfig.sol";
 
 contract DeployBeefyClient is Script {
     using stdJson for string;
@@ -13,9 +14,10 @@ contract DeployBeefyClient is Script {
     function setUp() public {}
 
     function run() public {
-        uint256 privateKey = vm.envUint("PRIVATE_KEY");
-        address deployer = vm.rememberKey(privateKey);
-        vm.startBroadcast(deployer);
+        HelperConfig helperConfig = new HelperConfig("");
+        HelperConfig.BeefyClientConfig memory beefyClientConfig = helperConfig.getBeefyClientConfig();
+
+        vm.startBroadcast();
 
         // BeefyClient
         // Seems `fs_permissions` explicitly configured as absolute path does not work and only allowed from project root
@@ -35,11 +37,14 @@ contract DeployBeefyClient is Script {
             beefyCheckpointRaw.readBytes32(".next.root")
         );
 
-        uint256 randaoCommitDelay = vm.envUint("RANDAO_COMMIT_DELAY");
-        uint256 randaoCommitExpiration = vm.envUint("RANDAO_COMMIT_EXP");
-        uint256 minimumSignatures = vm.envUint("MINIMUM_REQUIRED_SIGNATURES");
-        BeefyClient beefyClient =
-            new BeefyClient(randaoCommitDelay, randaoCommitExpiration, minimumSignatures, startBlock, current, next);
+        BeefyClient beefyClient = new BeefyClient(
+            beefyClientConfig.randaoCommitDelay,
+            beefyClientConfig.randaoCommitExpiration,
+            beefyClientConfig.minimumSignatures,
+            startBlock,
+            current,
+            next
+        );
 
         console2.log("BeefyClient: ", address(beefyClient));
 

@@ -12,6 +12,7 @@ import {AgentExecutor} from "../src/AgentExecutor.sol";
 import {OperatingMode} from "../src/Types.sol";
 import {HelperConfig} from "./HelperConfig.sol";
 import {WETH9} from "canonical-weth/WETH9.sol";
+import {IGateway} from "../src/interfaces/IGateway.sol";
 
 contract DeployLocal is Script {
     using stdJson for string;

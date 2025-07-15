@@ -162,6 +162,37 @@ contract GatewayTest is Test {
         return (Command.CreateAgent, abi.encode((keccak256("6666"))));
     }
 
+    function makeLegacyUnlockTokenCommand(bytes32 agentID, address token_, address recipient, uint128 amount)
+        public
+        pure
+        returns (Command, bytes memory)
+    {
+        bytes memory payload = abi.encode(token_, recipient, amount);
+        AgentExecuteParams memory params =
+            AgentExecuteParams({agentID: agentID, payload: abi.encode(AgentExecuteCommand.TransferToken, payload)});
+        return (Command.AgentExecute, abi.encode(params));
+    }
+
+    function makeUnlockTokenCommand(bytes32 agentID, address token_, address recipient, uint128 amount)
+        public
+        pure
+        returns (Command, bytes memory)
+    {
+        TransferNativeTokenParams memory params =
+            TransferNativeTokenParams({agentID: agentID, token: token_, recipient: recipient, amount: amount});
+        return (Command.TransferNativeToken, abi.encode(params));
+    }
+
+    function makeTransferNativeFromAgentCommand(bytes32 agentID, address recipient, uint128 amount)
+        public
+        pure
+        returns (Command, bytes memory)
+    {
+        TransferNativeFromAgentParams memory params =
+            TransferNativeFromAgentParams({agentID: agentID, recipient: recipient, amount: amount});
+        return (Command.TransferNativeFromAgent, abi.encode(params));
+    }
+
     function makeMockProof() public pure returns (Verification.Proof memory) {
         return Verification.Proof({
             leafPartial: Verification.MMRLeafPartial({
@@ -366,14 +397,6 @@ contract GatewayTest is Test {
         MockGateway(address(gateway)).transferNativeTokenPublic(encodedParams);
     }
 
-    function testAgentExecutionBadOrigin() public {
-        TransferNativeFromAgentParams memory params =
-            TransferNativeFromAgentParams({agentID: bytes32(0), recipient: address(this), amount: 1});
-
-        vm.expectRevert(Gateway.AgentDoesNotExist.selector);
-        MockGateway(address(gateway)).transferNativeFromAgentPublic(abi.encode(params));
-    }
-
     function testAgentExecutionBadPayload() public {
         AgentExecuteParams memory params = AgentExecuteParams({agentID: assetHubAgentID, payload: ""});
 
@@ -535,18 +558,30 @@ contract GatewayTest is Test {
         assertEq(uint256(mode), 1);
     }
 
-    function testWithdrawAgentFunds() public {
-        deal(assetHubAgent, 50 ether);
+    function testWithdrawAgentFundIsIgnored() public {
+        address recipient = makeAddr("test_recipeint");
+        uint128 amount = 1;
 
-        address recipient = makeAddr("recipient");
+        deal(assetHubAgent, amount);
 
-        bytes memory params =
-            abi.encode(TransferNativeFromAgentParams({agentID: assetHubAgentID, recipient: recipient, amount: 3 ether}));
+        (Command command, bytes memory params) = makeTransferNativeFromAgentCommand(assetHubAgentID, recipient, amount);
 
-        MockGateway(address(gateway)).transferNativeFromAgentPublic(params);
+        assertEq(address(assetHubAgent).balance, amount);
+        assertEq(recipient.balance, 0);
 
-        assertEq(assetHubAgent.balance, 47 ether);
-        assertEq(recipient.balance, 3 ether);
+        // Expect the gateway to emit `InboundMessageDispatched`
+        vm.expectEmit();
+        emit IGateway.InboundMessageDispatched(assetHubParaID.into(), 1, messageID, true);
+
+        hoax(relayer, 1 ether);
+        IGateway(address(gateway)).submitV1(
+            InboundMessage(assetHubParaID.into(), 1, command, params, maxDispatchGas, maxRefund, reward, messageID),
+            proof,
+            makeMockProof()
+        );
+
+        assertEq(address(assetHubAgent).balance, amount);
+        assertEq(recipient.balance, 0);
     }
 
     /**

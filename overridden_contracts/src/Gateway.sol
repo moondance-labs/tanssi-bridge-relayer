@@ -755,7 +755,7 @@ contract Gateway is IOGateway, IInitializable, IUpgradable {
 
     /// @dev Transfer ether from an agent
     function _transferNativeFromAgent(address agent, address payable recipient, uint256 amount) internal {
-        bytes memory call = abi.encodeCall(AgentExecutor.transferEther, (recipient, amount));
+        bytes memory call = abi.encodeCall(AgentExecutor.transferNative, (recipient, amount));
         _invokeOnAgent(agent, call);
     }
 

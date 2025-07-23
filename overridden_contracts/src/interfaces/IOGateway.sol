@@ -15,7 +15,7 @@
 pragma solidity ^0.8.0;
 
 import {ParaID, Command} from "../Types.sol";
-import {IGateway} from "../../../snowbridge/contracts/src/interfaces/IGateway.sol";
+import {IGateway} from "./IGateway.sol";
 
 interface IOGateway is IGateway {
     // Emitted when operators data has been created

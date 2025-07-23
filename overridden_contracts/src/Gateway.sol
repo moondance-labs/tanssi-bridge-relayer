@@ -17,7 +17,6 @@ import {
     Command,
     MultiAddress,
     Ticket,
-    TokenInfo,
     Costs,
     AgentExecuteCommand
 } from "./Types.sol";
@@ -94,7 +93,7 @@ contract Gateway is IOGateway, IInitializable, IUpgradable {
     error InvalidProof();
     error InvalidNonce();
     error NotEnoughGas();
-    error InsufficientEther();
+    error FeePaymentToLow();
     error Unauthorized();
     error Disabled();
     error AgentAlreadyCreated();
@@ -307,11 +306,11 @@ contract Gateway is IOGateway, IInitializable, IUpgradable {
 
         // Add the reward to the refund amount. If the sum is more than the funds available
         // in the channel agent, then reduce the total amount
-        uint256 amount = Math.min(refund + message.reward, address(this).balance);
+        uint256 amount = Math.min(refund + message.reward, address(channel.agent).balance);
 
-        // Do the payment if there funds available in the gateway
+        // Do the payment if there funds available in the agent
         if (amount > _dustThreshold()) {
-            payable(msg.sender).safeNativeTransfer(amount);
+            _transferNativeFromAgent(channel.agent, payable(msg.sender), amount);
         }
 
         emit InboundMessageDispatched(message.channelID, message.nonce, message.id, success);
@@ -345,13 +344,6 @@ contract Gateway is IOGateway, IInitializable, IUpgradable {
 
     function implementation() public view returns (address) {
         return ERC1967.load();
-    }
-
-    /**
-     * Fee management
-     */
-    function depositEther() external payable {
-        emit Deposited(msg.sender, msg.value);
     }
 
     /**
@@ -676,29 +668,19 @@ contract Gateway is IOGateway, IInitializable, IUpgradable {
         // Destination fee always in DOT
         uint256 fee = _calculateFee(ticket.costs);
 
-        // Ensure the user has provided enough ether for this message to be accepted.
-        // This includes:
-        // 1. The bridging fee, which is collected in this gateway contract
-        // 2. The ether value being bridged over to Polkadot, which is locked into the AssetHub
-        //    agent contract.
-        uint256 totalEther = fee + ticket.value;
-        if (msg.value < totalEther) {
-            revert InsufficientEther();
-        }
-        if (ticket.value > 0) {
-            payable(AssetsStorage.layout().assetHubAgent).safeNativeTransfer(ticket.value);
+        // Ensure the user has enough funds for this message to be accepted
+        if (msg.value < fee) {
+            revert FeePaymentToLow();
         }
 
         channel.outboundNonce = channel.outboundNonce + 1;
 
-        // Deposit total fee into gateway
-        payable(address(this)).safeNativeTransfer(fee);
+        // Deposit total fee into agent's contract
+        payable(channel.agent).safeNativeTransfer(fee);
 
-        // The fee is already collected into the gateway contract
         // Reimburse excess fee payment
-        uint256 excessFee = msg.value - totalEther;
-        if (excessFee > _dustThreshold()) {
-            payable(msg.sender).safeNativeTransfer(excessFee);
+        if (msg.value > fee) {
+            payable(msg.sender).safeNativeTransfer(msg.value - fee);
         }
 
         // Generate a unique ID for this message
@@ -867,10 +849,6 @@ contract Gateway is IOGateway, IInitializable, IUpgradable {
         assets.registerTokenFee = config.registerTokenFee;
         assets.assetHubCreateAssetFee = config.assetHubCreateAssetFee;
         assets.assetHubReserveTransferFee = config.assetHubReserveTransferFee;
-
-        // Register native Ether
-        TokenInfo storage etherTokenInfo = assets.tokenRegistry[address(0)];
-        etherTokenInfo.isRegistered = true;
 
         // Initialize operator storage
         OperatorStorage.Layout storage operatorStorage = OperatorStorage.layout();

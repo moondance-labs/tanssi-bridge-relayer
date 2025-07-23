@@ -11,6 +11,7 @@ import {Gateway} from "../src/Gateway.sol";
 import {AgentExecutor} from "../src/AgentExecutor.sol";
 import {OperatingMode} from "../src/Types.sol";
 import {HelperConfig} from "./HelperConfig.sol";
+import {WETH9} from "canonical-weth/WETH9.sol";
 
 contract DeployLocal is Script {
     using stdJson for string;
@@ -97,6 +98,10 @@ contract DeployLocal is Script {
         console2.log("BeefyClient: ", address(beefyClient));
         console2.log("Gateway impl: ", address(gatewayLogic));
         console2.log("gateway address: ", address(gateway));
+
+        // Deploy WETH for testing
+        new WETH9();
+
         vm.stopBroadcast();
     }
 }

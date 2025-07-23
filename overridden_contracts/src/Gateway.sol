@@ -691,6 +691,9 @@ contract Gateway is IOGateway, IInitializable, IUpgradable {
 
         channel.outboundNonce = channel.outboundNonce + 1;
 
+        // Deposit total fee into gateway
+        payable(address(this)).safeNativeTransfer(fee);
+
         // The fee is already collected into the gateway contract
         // Reimburse excess fee payment
         uint256 excessFee = msg.value - totalEther;

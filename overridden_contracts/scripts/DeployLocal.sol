@@ -101,12 +101,7 @@ contract DeployLocal is Script {
 
         // Deploy WETH for testing
         new WETH9();
-
-        // Fund the gateway proxy contract. Used to reward relayers.
-        uint256 initialDeposit = vm.envUint("GATEWAY_PROXY_INITIAL_DEPOSIT");
-
-        IGateway(address(gateway)).depositEther{value: initialDeposit}();
-
+        
         vm.stopBroadcast();
     }
 }

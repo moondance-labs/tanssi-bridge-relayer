@@ -25,7 +25,7 @@ import {SubstrateTypes} from "./../src/SubstrateTypes.sol";
 import {MultiAddress} from "../src/MultiAddress.sol";
 import {Channel, InboundMessage, OperatingMode, ParaID, Command, ChannelID, MultiAddress} from "../src/Types.sol";
 
-import {NativeTransferFailed} from "../src/utils/SafeTransfer.sol";
+import {NativeTransferFailed, SafeNativeTransfer} from "../src/utils/SafeTransfer.sol";
 import {PricingStorage} from "../src/storage/PricingStorage.sol";
 import {IERC20} from "../src/interfaces/IERC20.sol";
 import {TokenLib} from "../src/TokenLib.sol";
@@ -162,6 +162,37 @@ contract GatewayTest is Test {
         return (Command.CreateAgent, abi.encode((keccak256("6666"))));
     }
 
+    function makeLegacyUnlockTokenCommand(bytes32 agentID, address token_, address recipient, uint128 amount)
+        public
+        pure
+        returns (Command, bytes memory)
+    {
+        bytes memory payload = abi.encode(token_, recipient, amount);
+        AgentExecuteParams memory params =
+            AgentExecuteParams({agentID: agentID, payload: abi.encode(AgentExecuteCommand.TransferToken, payload)});
+        return (Command.AgentExecute, abi.encode(params));
+    }
+
+    function makeUnlockTokenCommand(bytes32 agentID, address token_, address recipient, uint128 amount)
+        public
+        pure
+        returns (Command, bytes memory)
+    {
+        TransferNativeTokenParams memory params =
+            TransferNativeTokenParams({agentID: agentID, token: token_, recipient: recipient, amount: amount});
+        return (Command.TransferNativeToken, abi.encode(params));
+    }
+
+    function makeTransferNativeFromAgentCommand(bytes32 agentID, address recipient, uint128 amount)
+        public
+        pure
+        returns (Command, bytes memory)
+    {
+        TransferNativeFromAgentParams memory params =
+            TransferNativeFromAgentParams({agentID: agentID, recipient: recipient, amount: amount});
+        return (Command.TransferNativeFromAgent, abi.encode(params));
+    }
+
     function makeMockProof() public pure returns (Verification.Proof memory) {
         return Verification.Proof({
             leafPartial: Verification.MMRLeafPartial({
@@ -256,15 +287,32 @@ contract GatewayTest is Test {
      * Fees & Rewards
      */
 
-    // Message relayer should be rewarded from the agent for a channel
-    function testRelayerRewardedFromAgent() public {
+    // Test that the Gateway Proxy can receive funds to act as a wallet to pay out rewards and refunds
+    function testGatewayProxyCanRecieveFunds() public {
+        uint256 amount = 1 ether;
+        address deployer = makeAddr("deployer");
+        hoax(deployer, amount);
+
+        assertEq(address(gateway).balance, 0);
+
+        vm.expectRevert(GatewayProxy.NativeCurrencyNotAccepted.selector);
+        SafeNativeTransfer.safeNativeTransfer(payable(gateway), amount);
+
+        IGateway(address(gateway)).depositEther{value: amount}();
+
+        assertEq(address(gateway).balance, amount);
+    }
+
+    // Message relayer should be rewarded from the Gatewat Proxy for a channel
+    function testRelayerRewardedFromGateway() public {
         (Command command, bytes memory params) = makeCreateAgentCommand();
 
         vm.txGasPrice(10 gwei);
         hoax(relayer, 1 ether);
-        deal(assetHubAgent, 50 ether);
+        deal(address(gateway), 50 ether);
 
         uint256 relayerBalanceBefore = address(relayer).balance;
+        uint256 gatewayBalanceBefore = address(address(gateway)).balance;
         uint256 agentBalanceBefore = address(assetHubAgent).balance;
 
         uint256 startGas = gasleft();
@@ -277,19 +325,22 @@ contract GatewayTest is Test {
         uint256 estimatedActualRefundAmount = (startGas - endGas) * tx.gasprice;
         assertLt(estimatedActualRefundAmount, maxRefund);
 
-        // Check that agent balance decreased and relayer balance increases
-        assertLt(address(assetHubAgent).balance, agentBalanceBefore);
+        // Agents do not pay reward+refund so no balance should change.
+        assertEq(address(assetHubAgent).balance, agentBalanceBefore);
+        // Relayer balance has increased
+        assertLt(address(gateway).balance, gatewayBalanceBefore);
+        // Relayer balance has increased
         assertGt(relayer.balance, relayerBalanceBefore);
 
         // The total amount paid to the relayer
-        uint256 totalPaid = agentBalanceBefore - address(assetHubAgent).balance;
+        uint256 totalPaid = gatewayBalanceBefore - address(gateway).balance;
 
         // Since we know that the actual refund amount is less than the max refund,
         // the total amount paid to the relayer is less.
         assertLt(totalPaid, maxRefund + reward);
     }
 
-    // In this case, the agent has no funds to reward the relayer
+    // In this case, the Gateway Proxy has no funds to reward the relayer
     function testRelayerNotRewarded() public {
         (Command command, bytes memory params) = makeCreateAgentCommand();
 
@@ -340,7 +391,7 @@ contract GatewayTest is Test {
         hoax(user);
         token.approve(address(gateway), 1);
 
-        vm.expectRevert(Gateway.FeePaymentToLow.selector);
+        vm.expectRevert(Gateway.InsufficientEther.selector);
         hoax(user, 2 ether);
         IGateway(address(gateway)).sendToken{value: 0.002 ether}(
             address(token), ParaID.wrap(0), recipientAddress32, 1, 1
@@ -364,14 +415,6 @@ contract GatewayTest is Test {
 
         bytes memory encodedParams = abi.encode(params);
         MockGateway(address(gateway)).transferNativeTokenPublic(encodedParams);
-    }
-
-    function testAgentExecutionBadOrigin() public {
-        TransferNativeFromAgentParams memory params =
-            TransferNativeFromAgentParams({agentID: bytes32(0), recipient: address(this), amount: 1});
-
-        vm.expectRevert(Gateway.AgentDoesNotExist.selector);
-        MockGateway(address(gateway)).transferNativeFromAgentPublic(abi.encode(params));
     }
 
     function testAgentExecutionBadPayload() public {
@@ -535,18 +578,30 @@ contract GatewayTest is Test {
         assertEq(uint256(mode), 1);
     }
 
-    function testWithdrawAgentFunds() public {
-        deal(assetHubAgent, 50 ether);
+    function testWithdrawAgentFundIsSuccessful() public {
+        address recipient = makeAddr("test_recipeint");
+        uint128 amount = 1;
 
-        address recipient = makeAddr("recipient");
+        deal(assetHubAgent, amount);
 
-        bytes memory params =
-            abi.encode(TransferNativeFromAgentParams({agentID: assetHubAgentID, recipient: recipient, amount: 3 ether}));
+        (Command command, bytes memory params) = makeTransferNativeFromAgentCommand(assetHubAgentID, recipient, amount);
 
-        MockGateway(address(gateway)).transferNativeFromAgentPublic(params);
+        assertEq(address(assetHubAgent).balance, amount);
+        assertEq(recipient.balance, 0);
 
-        assertEq(assetHubAgent.balance, 47 ether);
-        assertEq(recipient.balance, 3 ether);
+        // Expect the gateway to emit `InboundMessageDispatched`
+        vm.expectEmit();
+        emit IGateway.InboundMessageDispatched(assetHubParaID.into(), 1, messageID, true);
+
+        hoax(relayer, 1 ether);
+        IGateway(address(gateway)).submitV1(
+            InboundMessage(assetHubParaID.into(), 1, command, params, maxDispatchGas, maxRefund, reward, messageID),
+            proof,
+            makeMockProof()
+        );
+
+        assertEq(address(assetHubAgent).balance, 0);
+        assertEq(recipient.balance, 1);
     }
 
     /**
@@ -981,7 +1036,7 @@ contract GatewayTest is Test {
 
         vm.expectRevert(Assets.TokenNotRegistered.selector);
 
-        IGateway(address(gateway)).sendToken{value: 0.1 ether}(address(0x0), destPara, recipientAddress32, 1, 1);
+        IGateway(address(gateway)).sendToken{value: 0.1 ether}(address(0x1), destPara, recipientAddress32, 1, 1);
     }
 
     function testSendTokenFromNotMintedAccountWillFail() public {

@@ -6,7 +6,7 @@ import (
 	"math/big"
 
 	"github.com/holiman/uint256"
-	"github.com/moondance-labs/tanssi-bridge-relayer/relays/contracts"
+	"github.com/snowfork/snowbridge/relayer/contracts"
 	"github.com/sirupsen/logrus"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 	"github.com/snowfork/snowbridge/relayer/crypto/keccak"

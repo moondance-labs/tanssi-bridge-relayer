@@ -100,4 +100,4 @@ require (
 	rsc.io/tmplfunc v0.0.3 // indirect
 )
 
-replace github.com/snowfork/snowbridge/relayer => ./snowbridge/relayer
+replace github.com/snowfork/snowbridge/relayer => github.com/moondance-labs/snowbridge/relayer v0.0.0-20250804132540-7fb133761918

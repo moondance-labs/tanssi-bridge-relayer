@@ -16,8 +16,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-      with:
-          submodules: recursive
 
     - name: Check jq
       run: jq --version
@@ -45,32 +43,14 @@ jobs:
     - name: Install sszgen
       run: go install github.com/ferranbt/fastssz/sszgen@v0.1.4
 
-    - name: Check sszgen
-      run: sszgen --help
-
     - name: Install Mage
       run: go install github.com/magefile/mage@v1.15.0
 
     - name: Check mage
       run: mage --version
 
-    - name: Run Forge fmt
-      run: |
-        forge fmt overridden_contracts/ --check
-      id: fmt
-
     - name: Build
       run: mage build
 
-    - name: Check if go contract bindings are up-to-date
-      run: git diff --exit-code ./relays/contracts || (echo "The contract bindings are not up-to-date against contracts." && exit 1)
-
     - name: Test Relayer
       run: mage test
-
-    - name: Run Forge tests
-      run: |
-        cd snowbridge/contracts
-        forge test -vvv
-      id: test
-

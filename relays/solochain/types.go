@@ -4,7 +4,7 @@ import (
 	"math/big"
 
 	"github.com/moondance-labs/tanssi-bridge-relayer/relays/common"
-	"github.com/moondance-labs/tanssi-bridge-relayer/relays/contracts"
+	"github.com/snowfork/snowbridge/relayer/contracts"
 	"github.com/snowfork/go-substrate-rpc-client/v4/scale"
 	"github.com/snowfork/go-substrate-rpc-client/v4/types"
 )

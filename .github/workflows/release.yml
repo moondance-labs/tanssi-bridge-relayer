@@ -32,9 +32,9 @@ jobs:
           node-version: "14"
 
       - name: Setup go
-        uses: actions/checkout@v4
+        uses: actions/setup-go@v5
         with:
-          go-version: "^1.21.0"
+          go-version: '^1.21.0'
 
       - name: Install Go tools
         run: >
